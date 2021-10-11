@@ -276,6 +276,15 @@ class ORCFileReader::Impl {
     return ReadTable(opts, schema, out);
   }
 
+  Status Read(const std::vector<std::string>& include_names,
+              std::shared_ptr<Table>* out) {
+    liborc::RowReaderOptions opts;
+    RETURN_NOT_OK(SelectNames(&opts, include_names));
+    std::shared_ptr<Schema> schema;
+    RETURN_NOT_OK(ReadSchema(opts, &schema));
+    return ReadTable(opts, schema, out);
+  }
+
   Status Read(const std::shared_ptr<Schema>& schema,
               const std::vector<int>& include_indices, std::shared_ptr<Table>* out) {
     liborc::RowReaderOptions opts;
@@ -295,6 +304,16 @@ class ORCFileReader::Impl {
                     std::shared_ptr<RecordBatch>* out) {
     liborc::RowReaderOptions opts;
     RETURN_NOT_OK(SelectIndices(&opts, include_indices));
+    RETURN_NOT_OK(SelectStripe(&opts, stripe));
+    std::shared_ptr<Schema> schema;
+    RETURN_NOT_OK(ReadSchema(opts, &schema));
+    return ReadBatch(opts, schema, stripes_[stripe].num_rows, out);
+  }
+
+  Status ReadStripe(int64_t stripe, const std::vector<std::string>& include_names,
+                    std::shared_ptr<RecordBatch>* out) {
+    liborc::RowReaderOptions opts;
+    RETURN_NOT_OK(SelectNames(&opts, include_names));
     RETURN_NOT_OK(SelectStripe(&opts, stripe));
     std::shared_ptr<Schema> schema;
     RETURN_NOT_OK(ReadSchema(opts, &schema));
@@ -334,6 +353,13 @@ class ORCFileReader::Impl {
       include_indices_list.push_back(*it);
     }
     opts->includeTypes(include_indices_list);
+    return Status::OK();
+  }
+
+  Status SelectNames(liborc::RowReaderOptions* opts,
+                     const std::vector<std::string>& include_names) {
+    std::list<std::string> include_names_list(include_names.begin(), include_names.end());
+    opts->include(include_names_list);
     return Status::OK();
   }
 
@@ -464,6 +490,13 @@ Status ORCFileReader::Read(const std::vector<int>& include_indices,
   return impl_->Read(include_indices, out);
 }
 
+Result<std::shared_ptr<Table>> ORCFileReader::Read(
+    const std::vector<std::string>& include_names) {
+  std::shared_ptr<Table> table;
+  RETURN_NOT_OK(impl_->Read(include_names, &table));
+  return table;
+}
+
 Status ORCFileReader::Read(const std::shared_ptr<Schema>& schema,
                            const std::vector<int>& include_indices,
                            std::shared_ptr<Table>* out) {
@@ -483,6 +516,13 @@ Result<std::shared_ptr<RecordBatch>> ORCFileReader::ReadStripe(int64_t stripe) {
 Status ORCFileReader::ReadStripe(int64_t stripe, const std::vector<int>& include_indices,
                                  std::shared_ptr<RecordBatch>* out) {
   return impl_->ReadStripe(stripe, include_indices, out);
+}
+
+Result<std::shared_ptr<RecordBatch>> ORCFileReader::ReadStripe(
+    int64_t stripe, const std::vector<std::string>& include_names) {
+  std::shared_ptr<RecordBatch> recordBatch;
+  RETURN_NOT_OK(impl_->ReadStripe(stripe, include_names, &recordBatch));
+  return recordBatch;
 }
 
 Status ORCFileReader::Seek(int64_t row_number) { return impl_->Seek(row_number); }
