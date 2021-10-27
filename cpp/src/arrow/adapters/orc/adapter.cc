@@ -435,8 +435,21 @@ Status ORCFileReader::Open(const std::shared_ptr<io::RandomAccessFile>& file,
   return Status::OK();
 }
 
+Result<std::unique_ptr<ORCFileReader>> ORCFileReader::Open(
+    const std::shared_ptr<io::RandomAccessFile>& file, MemoryPool* pool) {
+  auto result = std::unique_ptr<ORCFileReader>(new ORCFileReader());
+  RETURN_NOT_OK(result->impl_->Open(file, pool));
+  return std::move(result);
+}
+
 Status ORCFileReader::ReadSchema(std::shared_ptr<Schema>* out) {
   return impl_->ReadSchema(out);
+}
+
+Result<std::shared_ptr<Schema>> ORCFileReader::ReadSchema() {
+  std::shared_ptr<Schema> schema;
+  RETURN_NOT_OK(impl_->ReadSchema(&schema));
+  return schema;
 }
 
 Status ORCFileReader::Read(std::shared_ptr<Table>* out) { return impl_->Read(out); }
@@ -459,6 +472,12 @@ Status ORCFileReader::Read(const std::shared_ptr<Schema>& schema,
 
 Status ORCFileReader::ReadStripe(int64_t stripe, std::shared_ptr<RecordBatch>* out) {
   return impl_->ReadStripe(stripe, out);
+}
+
+Result<std::shared_ptr<RecordBatch>> ORCFileReader::ReadStripe(int64_t stripe) {
+  std::shared_ptr<RecordBatch> recordBatch;
+  RETURN_NOT_OK(impl_->ReadStripe(stripe, &recordBatch));
+  return recordBatch;
 }
 
 Status ORCFileReader::ReadStripe(int64_t stripe, const std::vector<int>& include_indices,

@@ -148,7 +148,7 @@ Result<ScanTaskIterator> OrcFileFormat::ScanFile(
 }
 
 Future<util::optional<int64_t>> OrcFileFormat::CountRows(
-    const std::shared_ptr<FileFragment>& file, compute::Expression predicate,
+    const std::shared_ptr<FileFragment>& file, Expression predicate,
     const std::shared_ptr<ScanOptions>& options) {
   if (ExpressionHasFieldRefs(predicate)) {
     return Future<util::optional<int64_t>>::MakeFinished(util::nullopt);
@@ -166,16 +166,8 @@ Future<util::optional<int64_t>> OrcFileFormat::CountRows(
 // //
 
 std::shared_ptr<FileWriteOptions> OrcFileFormat::DefaultWriteOptions() {
-  // TODO (https://issues.apache.org/jira/browse/ARROW-13796)
-  return nullptr;
-}
-
-Result<std::shared_ptr<FileWriter>> OrcFileFormat::MakeWriter(
-    std::shared_ptr<io::OutputStream> destination, std::shared_ptr<Schema> schema,
-    std::shared_ptr<FileWriteOptions> options,
-    fs::FileLocator destination_locator) const {
-  // TODO (https://issues.apache.org/jira/browse/ARROW-13796)
-  return Status::NotImplemented("ORC writer not yet implemented.");
+ // TODO (https://issues.apache.org/jira/browse/ARROW-13796)
+ return nullptr;
 }
 
 }  // namespace dataset

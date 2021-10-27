@@ -48,10 +48,23 @@ class ARROW_EXPORT ORCFileReader {
   static Status Open(const std::shared_ptr<io::RandomAccessFile>& file, MemoryPool* pool,
                      std::unique_ptr<ORCFileReader>* reader);
 
+  /// \brief Creates a new ORC reader
+  ///
+  /// \param[in] file the data source
+  /// \param[in] pool a MemoryPool to use for buffer allocations
+  /// \return the returned reader object
+  static Result<std::unique_ptr<ORCFileReader>> Open(
+      const std::shared_ptr<io::RandomAccessFile>& file, MemoryPool* pool);
+
   /// \brief Return the schema read from the ORC file
   ///
   /// \param[out] out the returned Schema object
   Status ReadSchema(std::shared_ptr<Schema>* out);
+
+  /// \brief Return the schema read from the ORC file
+  ///
+  /// \return the returned Schema object
+  Result<std::shared_ptr<Schema>> ReadSchema();
 
   /// \brief Read the file as a Table
   ///
@@ -91,6 +104,12 @@ class ARROW_EXPORT ORCFileReader {
   /// \param[in] stripe the stripe index
   /// \param[out] out the returned RecordBatch
   Status ReadStripe(int64_t stripe, std::shared_ptr<RecordBatch>* out);
+
+  /// \brief Read a single stripe as a RecordBatch
+  ///
+  /// \param[in] stripe the stripe index
+  /// \return the returned RecordBatch
+  Result<std::shared_ptr<RecordBatch>> ReadStripe(int64_t stripe);
 
   /// \brief Read a single stripe as a RecordBatch
   ///
