@@ -180,5 +180,12 @@ std::shared_ptr<FileWriteOptions> OrcFileFormat::DefaultWriteOptions() {
  return nullptr;
 }
 
+Result<std::shared_ptr<FileWriter>> OrcFileFormat::MakeWriter(
+  std::shared_ptr<io::OutputStream> destination, std::shared_ptr<Schema> schema,
+  std::shared_ptr<FileWriteOptions> options) const {
+  // TODO (https://issues.apache.org/jira/browse/ARROW-13796)
+  return Status::NotImplemented("ORC writer not yet implemented.");
+}
+
 }  // namespace dataset
 }  // namespace arrow

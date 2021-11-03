@@ -66,6 +66,10 @@ class ARROW_DS_EXPORT OrcFileFormat : public FileFormat {
       const std::shared_ptr<ScanOptions>& options) override;
 
   std::shared_ptr<FileWriteOptions> DefaultWriteOptions() override;
+  
+  Result<std::shared_ptr<FileWriter>> MakeWriter(
+      std::shared_ptr<io::OutputStream> destination, std::shared_ptr<Schema> schema,
+      std::shared_ptr<FileWriteOptions> options) const override;
 };
 
 /// @}
