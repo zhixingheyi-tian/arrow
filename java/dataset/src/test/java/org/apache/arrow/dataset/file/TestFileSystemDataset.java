@@ -232,6 +232,36 @@ public class TestFileSystemDataset extends TestNativeDataset {
   }
 
   @Test
+  public void testOrcStructTypeRead() throws Exception {
+    RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+    FileSystemDatasetFactory factory = new FileSystemDatasetFactory(allocator,
+            NativeMemoryPool.getDefault(), OrcFileFormat.createDefault(), "file://" + resourcePath("data/struct_example.orc"));
+    ScanOptions options = new ScanOptions(new String[] {"_1"}, Filter.EMPTY, 100);
+    Schema schema = factory.inspect();
+    NativeDataset dataset = factory.finish(schema);
+    NativeScanner nativeScanner = dataset.newScan(options);
+    List<? extends ScanTask> scanTasks = collect(nativeScanner.scan());
+    Assert.assertEquals(1, scanTasks.size());
+    ScanTask scanTask = scanTasks.get(0);
+    ScanTask.BatchIterator itr = scanTask.execute();
+
+    VectorSchemaRoot vsr = VectorSchemaRoot.create(schema, allocator);
+    VectorLoader loader = new VectorLoader(vsr);
+    int rowCount = 0;
+    while (itr.hasNext()) {
+      try (ArrowRecordBatch next = itr.next()) {
+        loader.load(next);
+      }
+      rowCount += vsr.getRowCount();
+
+    }
+    Assert.assertEquals(50, rowCount);
+    assertEquals(1, schema.getFields().size());
+    assertEquals("_1", schema.getFields().get(0).getName());
+    AutoCloseables.close(vsr, allocator);
+  }
+
+  @Test
   public void testStructTypeReadWithEmptyProjector() throws Exception {
     RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
     FileSystemDatasetFactory factory = new FileSystemDatasetFactory(allocator,
