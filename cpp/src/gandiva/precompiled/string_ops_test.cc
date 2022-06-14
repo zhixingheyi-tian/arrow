@@ -56,6 +56,41 @@ TEST(TestStringOps, TestBeginsEnds) {
   EXPECT_FALSE(ends_with_utf8_utf8("hello", 5, "sir", 3));
 }
 
+TEST(TestStringOps, TestSpace) {
+  // Space - returns a string with 'n' spaces
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  int32_t out_len = 0;
+
+  auto out = space_int32(ctx_ptr, 1, &out_len);
+  EXPECT_EQ(std::string(out, out_len), " ");
+  out = space_int32(ctx_ptr, 10, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "          ");
+  out = space_int32(ctx_ptr, 5, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "     ");
+  out = space_int32(ctx_ptr, -5, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "");
+  out = space_int32(ctx_ptr, 65537, &out_len);
+  EXPECT_EQ(std::string(out, out_len), std::string(65536, ' '));
+  out = space_int32(ctx_ptr, 2147483647, &out_len);
+  EXPECT_EQ(std::string(out, out_len), std::string(65536, ' '));
+
+  out = space_int64(ctx_ptr, 2, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "  ");
+  out = space_int64(ctx_ptr, 9, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "         ");
+  out = space_int64(ctx_ptr, 4, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "    ");
+  out = space_int64(ctx_ptr, -5, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "");
+  out = space_int64(ctx_ptr, 65536, &out_len);
+  EXPECT_EQ(std::string(out, out_len), std::string(65536, ' '));
+  out = space_int64(ctx_ptr, 9223372036854775807, &out_len);
+  EXPECT_EQ(std::string(out, out_len), std::string(65536, ' '));
+  out = space_int64(ctx_ptr, -2639077559LL, &out_len);
+  EXPECT_EQ(std::string(out, out_len), "");
+}
+
 TEST(TestStringOps, TestIsSubstr) {
   EXPECT_TRUE(is_substr_utf8_utf8("hello world", 11, "world", 5));
   EXPECT_TRUE(is_substr_utf8_utf8("hello world", 11, "lo wo", 5));
@@ -694,6 +729,162 @@ TEST(TestStringOps, TestLtrim) {
   out_str = ltrim_utf8_utf8(ctx_ptr, "acbabbcabb", 10, "abcbd", 5, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "");
   EXPECT_FALSE(ctx.has_error());
+}
+
+TEST(TestStringOps, TestLpadString) {
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  gdv_int32 out_len = 0;
+  const char* out_str;
+
+  // LPAD function tests - with defined fill pad text
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 4, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "Test");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 10, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 0, 10, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 0, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, -500, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 500, "", 0, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 18, "Fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "FillFillTestString");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 15, "Fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "FillFTestString");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 20, "Fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "FillFillFiTestString");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "абвгд", 10, 7, "д", 2, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "ддабвгд");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "абвгд", 10, 20, "абвгд", 10, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "абвгдабвгдабвгдабвгд");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "hello", 5, 6, "д", 2, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "дhello");
+
+  out_str = lpad_utf8_int32_utf8(ctx_ptr, "大学路", 9, 65536, "哈", 3, &out_len);
+  EXPECT_EQ(out_len, 65536 * 3);
+
+  // LPAD function tests - with NO pad text
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "Test");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, 10, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 0, 10, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, 0, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, -500, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, 18, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "        TestString");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, 15, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "     TestString");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "абвгд", 10, 7, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "  абвгд");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, 65537, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), std::string(65526, ' ') + "TestString");
+
+  out_str = lpad_utf8_int32(ctx_ptr, "TestString", 10, -1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+}
+
+TEST(TestStringOps, TestRpadString) {
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  gdv_int32 out_len = 0;
+  const char* out_str;
+
+  // RPAD function tests - with defined fill pad text
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 4, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "Test");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 10, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 0, 10, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 0, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, -500, "fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 500, "", 0, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 18, "Fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestStringFillFill");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 15, "Fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestStringFillF");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "TestString", 10, 20, "Fill", 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestStringFillFillFi");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "абвгд", 10, 7, "д", 2, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "абвгддд");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "абвгд", 10, 20, "абвгд", 10, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "абвгдабвгдабвгдабвгд");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "hello", 5, 6, "д", 2, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "helloд");
+
+  out_str = rpad_utf8_int32_utf8(ctx_ptr, "大学路", 9, 655360, "哈雷路", 3, &out_len);
+  EXPECT_EQ(out_len, 65536 * 3);
+
+  // RPAD function tests - with NO pad text
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, 4, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "Test");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, 10, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 0, 10, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, 0, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, -500, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, 18, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString        ");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, 15, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString     ");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "абвгд", 10, 7, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "абвгд  ");
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, 65537, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "TestString" + std::string(65526, ' '));
+
+  out_str = rpad_utf8_int32(ctx_ptr, "TestString", 10, -1, &out_len);
+  EXPECT_EQ(std::string(out_str, out_len), "");
 }
 
 TEST(TestStringOps, TestRtrim) {

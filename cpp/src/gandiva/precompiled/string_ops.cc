@@ -191,6 +191,27 @@ gdv_int32 utf8_length(gdv_int64 context, const char* data, gdv_int32 data_len) {
   return count;
 }
 
+// Count the number of utf8 characters, ignoring invalid char, considering size 1
+FORCE_INLINE
+gdv_int32 utf8_length_ignore_invalid(const char* data, gdv_int32 data_len) {
+  int char_len = 0;
+  int count = 0;
+  for (int i = 0; i < data_len; i += char_len) {
+    char_len = utf8_char_length(data[i]);
+    if (char_len == 0 || i + char_len > data_len) {  // invalid byte or incomplete glyph
+      // if invalid byte or incomplete glyph, ignore it
+      char_len = 1;
+    }
+    for (int j = 1; j < char_len; ++j) {
+      if ((data[i + j] & 0xC0) != 0x80) {  // bytes following head-byte of glyph
+        char_len += 1;
+      }
+    }
+    ++count;
+  }
+  return count;
+}
+
 // Get the byte position corresponding to a character position for a non-empty utf8
 // sequence
 FORCE_INLINE
@@ -280,6 +301,37 @@ const char* lower_utf8(gdv_int64 context, const char* data, gdv_int32 data_len,
   *out_len = data_len;
   return ret;
 }
+
+// set max/min str length for space_int32, space_int64, lpad_utf8_int32_utf8
+// and rpad_utf8_int32_utf8 to avoid exceptions
+static const gdv_int32 max_str_length = 65536;
+static const gdv_int32 min_str_length = 0;
+// Returns a string of 'n' spaces.
+#define SPACE_STR(IN_TYPE)                                                              \
+  GANDIVA_EXPORT                                                                        \
+  const char* space_##IN_TYPE(gdv_int64 ctx, gdv_##IN_TYPE n, int32_t* out_len) {       \
+    n = std::min(static_cast<gdv_##IN_TYPE>(max_str_length), n);                        \
+    n = std::max(static_cast<gdv_##IN_TYPE>(min_str_length), n);                        \
+    gdv_int32 n_times = static_cast<gdv_int32>(n);                                      \
+    if (n_times <= 0) {                                                                 \
+      *out_len = 0;                                                                     \
+      return "";                                                                        \
+    }                                                                                   \
+    char* ret = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(ctx, n_times));     \
+    if (ret == nullptr) {                                                               \
+      gdv_fn_context_set_error_msg(ctx, "Could not allocate memory for output string"); \
+      *out_len = 0;                                                                     \
+      return "";                                                                        \
+    }                                                                                   \
+    for (int i = 0; i < n_times; i++) {                                                 \
+      ret[i] = ' ';                                                                     \
+    }                                                                                   \
+    *out_len = n_times;                                                                 \
+    return ret;                                                                         \
+  }
+
+SPACE_STR(int32)
+SPACE_STR(int64)
 
 // Reverse a utf8 sequence
 FORCE_INLINE
@@ -767,11 +819,13 @@ const char* concat_utf8_utf8_utf8(gdv_int64 context, const char* in1, gdv_int32 
                                   bool in3_validity, gdv_int32* out_len) {
   if (!in1_validity) {
     in1_len = 0;
+    in2_len = 0;
   }
-  if (!in2_validity) {
+  if (!in2_validity || (!in1_validity && !in3_validity)) {
     in2_len = 0;
   }
   if (!in3_validity) {
+    in2_len = 0;
     in3_len = 0;
   }
   return concatOperator_utf8_utf8_utf8(context, in1, in1_len, in2, in2_len, in3, in3_len,
@@ -1422,6 +1476,167 @@ const char* replace_utf8_utf8_utf8(gdv_int64 context, const char* text,
   return replace_with_max_len_utf8_utf8_utf8(context, text, text_len, from_str,
                                              from_str_len, to_str, to_str_len, 65535,
                                              out_len);
+}
+
+FORCE_INLINE
+gdv_int32 evaluate_return_char_length(gdv_int32 text_len, gdv_int32 actual_text_len,
+                                      gdv_int32 return_length, const char* fill_text,
+                                      gdv_int32 fill_text_len) {
+  gdv_int32 fill_actual_text_len = utf8_length_ignore_invalid(fill_text, fill_text_len);
+  gdv_int32 repeat_times = (return_length - actual_text_len) / fill_actual_text_len;
+  gdv_int32 return_char_length = repeat_times * fill_text_len + text_len;
+  gdv_int32 mod = (return_length - actual_text_len) % fill_actual_text_len;
+  gdv_int32 char_len = 0;
+  gdv_int32 fill_index = 0;
+  for (gdv_int32 i = 0; i < mod; i++) {
+    char_len = utf8_char_length(fill_text[fill_index]);
+    fill_index += char_len;
+    return_char_length += char_len;
+  }
+  return return_char_length;
+}
+
+FORCE_INLINE
+const char* lpad_utf8_int32_utf8(gdv_int64 context, const char* text, gdv_int32 text_len,
+                                 gdv_int32 return_length, const char* fill_text,
+                                 gdv_int32 fill_text_len, gdv_int32* out_len) {
+  // if the text length or the defined return length (number of characters to return)
+  // is <=0, then return an empty string.
+  return_length = std::min(max_str_length, return_length);
+  return_length = std::max(min_str_length, return_length);
+  if (text_len == 0 || return_length <= 0) {
+    *out_len = 0;
+    return "";
+  }
+
+  // count the number of utf8 characters on text, ignoring invalid bytes
+  int actual_text_len = utf8_length_ignore_invalid(text, text_len);
+
+  if (return_length == actual_text_len ||
+      (return_length > actual_text_len && fill_text_len == 0)) {
+    // case where the return length is same as the text's length, or if it need to
+    // fill into text but "fill_text" is empty, then return text directly.
+    *out_len = text_len;
+    return text;
+  } else if (return_length < actual_text_len) {
+    // case where it truncates the result on return length.
+    *out_len = utf8_byte_pos(context, text, text_len, return_length);
+    return text;
+  } else {
+    // case (return_length > actual_text_len)
+    // case where it needs to copy "fill_text" on the string left. The total number
+    // of chars to copy is given by (return_length -  actual_text_len)
+    gdv_int32 return_char_length = evaluate_return_char_length(
+        text_len, actual_text_len, return_length, fill_text, fill_text_len);
+    char* ret = reinterpret_cast<gdv_binary>(
+        gdv_fn_context_arena_malloc(context, return_char_length));
+    if (ret == nullptr) {
+      gdv_fn_context_set_error_msg(context,
+                                   "Could not allocate memory for output string");
+      *out_len = 0;
+      return "";
+    }
+    // try to fulfill the return string with the "fill_text" continuously
+    int32_t copied_chars_count = 0;
+    int32_t copied_chars_position = 0;
+    while (copied_chars_count < return_length - actual_text_len) {
+      int32_t char_len;
+      int32_t fill_index;
+      // for each char, evaluate its length to consider it when mem copying
+      for (fill_index = 0; fill_index < fill_text_len; fill_index += char_len) {
+        if (copied_chars_count >= return_length - actual_text_len) {
+          break;
+        }
+        char_len = utf8_char_length(fill_text[fill_index]);
+        // ignore invalid char on the fill text, considering it as size 1
+        if (char_len == 0) char_len += 1;
+        copied_chars_count++;
+      }
+      memcpy(ret + copied_chars_position, fill_text, fill_index);
+      copied_chars_position += fill_index;
+    }
+    // after fulfilling the text, copy the main string
+    memcpy(ret + copied_chars_position, text, text_len);
+    *out_len = copied_chars_position + text_len;
+    return ret;
+  }
+}
+
+FORCE_INLINE
+const char* rpad_utf8_int32_utf8(gdv_int64 context, const char* text, gdv_int32 text_len,
+                                 gdv_int32 return_length, const char* fill_text,
+                                 gdv_int32 fill_text_len, gdv_int32* out_len) {
+  // if the text length or the defined return length (number of characters to return)
+  // is <=0, then return an empty string.
+  return_length = std::min(max_str_length, return_length);
+  return_length = std::max(min_str_length, return_length);
+  if (text_len == 0 || return_length <= 0) {
+    *out_len = 0;
+    return "";
+  }
+
+  // count the number of utf8 characters on text, ignoring invalid bytes
+  int actual_text_len = utf8_length_ignore_invalid(text, text_len);
+
+  if (return_length == actual_text_len ||
+      (return_length > actual_text_len && fill_text_len == 0)) {
+    // case where the return length is same as the text's length, or if it need to
+    // fill into text but "fill_text" is empty, then return text directly.
+    *out_len = text_len;
+    return text;
+  } else if (return_length < actual_text_len) {
+    // case where it truncates the result on return length.
+    *out_len = utf8_byte_pos(context, text, text_len, return_length);
+    return text;
+  } else {
+    // case (return_length > actual_text_len)
+    // case where it needs to copy "fill_text" on the string right
+    gdv_int32 return_char_length = evaluate_return_char_length(
+        text_len, actual_text_len, return_length, fill_text, fill_text_len);
+    char* ret = reinterpret_cast<gdv_binary>(
+        gdv_fn_context_arena_malloc(context, return_char_length));
+    if (ret == nullptr) {
+      gdv_fn_context_set_error_msg(context,
+                                   "Could not allocate memory for output string");
+      *out_len = 0;
+      return "";
+    }
+    // fulfill the initial text copying the main input string
+    memcpy(ret, text, text_len);
+    // try to fulfill the return string with the "fill_text" continuously
+    int32_t copied_chars_count = 0;
+    int32_t copied_chars_position = 0;
+    while (actual_text_len + copied_chars_count < return_length) {
+      int32_t char_len;
+      int32_t fill_length;
+      // for each char, evaluate its length to consider it when mem copying
+      for (fill_length = 0; fill_length < fill_text_len; fill_length += char_len) {
+        if (actual_text_len + copied_chars_count >= return_length) {
+          break;
+        }
+        char_len = utf8_char_length(fill_text[fill_length]);
+        // ignore invalid char on the fill text, considering it as size 1
+        if (char_len == 0) char_len += 1;
+        copied_chars_count++;
+      }
+      memcpy(ret + text_len + copied_chars_position, fill_text, fill_length);
+      copied_chars_position += fill_length;
+    }
+    *out_len = copied_chars_position + text_len;
+    return ret;
+  }
+}
+
+FORCE_INLINE
+const char* lpad_utf8_int32(gdv_int64 context, const char* text, gdv_int32 text_len,
+                            gdv_int32 return_length, gdv_int32* out_len) {
+  return lpad_utf8_int32_utf8(context, text, text_len, return_length, " ", 1, out_len);
+}
+
+FORCE_INLINE
+const char* rpad_utf8_int32(gdv_int64 context, const char* text, gdv_int32 text_len,
+                            gdv_int32 return_length, gdv_int32* out_len) {
+  return rpad_utf8_int32_utf8(context, text, text_len, return_length, " ", 1, out_len);
 }
 
 FORCE_INLINE
