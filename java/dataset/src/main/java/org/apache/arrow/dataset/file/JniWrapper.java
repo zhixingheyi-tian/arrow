@@ -28,11 +28,11 @@ public class JniWrapper {
   private static final JniWrapper INSTANCE = new JniWrapper();
   
   public static JniWrapper get() {
+    JniLoader.get().ensureLoaded();
     return INSTANCE;
   }
 
   private JniWrapper() {
-    JniLoader.get().ensureLoaded();
   }
 
   /**

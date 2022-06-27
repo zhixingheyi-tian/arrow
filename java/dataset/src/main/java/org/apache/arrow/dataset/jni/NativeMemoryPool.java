@@ -23,10 +23,6 @@ package org.apache.arrow.dataset.jni;
 public class NativeMemoryPool implements AutoCloseable {
   private final long nativeInstanceId;
 
-  private static void ensureJniLoaded() {
-    JniLoader.get().ensureLoaded();
-  }
-
   private NativeMemoryPool(long nativeInstanceId) {
     this.nativeInstanceId = nativeInstanceId;
   }
@@ -35,7 +31,7 @@ public class NativeMemoryPool implements AutoCloseable {
    * Get the default memory pool. This will return arrow::default_memory_pool() directly.
    */
   public static NativeMemoryPool getDefault() {
-    ensureJniLoaded();
+    JniLoader.get().ensureLoaded();
     return new NativeMemoryPool(getDefaultMemoryPool());
   }
 
@@ -45,7 +41,7 @@ public class NativeMemoryPool implements AutoCloseable {
    * from the listener in advance.
    */
   public static NativeMemoryPool createListenable(ReservationListener listener) {
-    ensureJniLoaded();
+    JniLoader.get().ensureLoaded();
     return new NativeMemoryPool(createListenableMemoryPool(listener));
   }
 
