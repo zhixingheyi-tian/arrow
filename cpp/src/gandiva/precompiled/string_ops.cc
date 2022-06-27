@@ -1681,6 +1681,9 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
         }
 
         *out_len = end_pos - i;
+        if (*out_len <= 0) {
+          return "";
+        }
         char* out_str =
             reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, *out_len));
         if (out_str == nullptr) {
@@ -1770,7 +1773,8 @@ const char* url_decoder(gdv_int64 context, const char* input, gdv_int32 input_le
       }
       // Illegal input. Just return the input, consistent with user's handling.
       if (i < input_len && c == '%') {
-        gdv_fn_context_set_error_msg(context, "url_decoder: Incomplete trailing escape (%) pattern");
+        // Setting error msg can cause execution failure, so only do it for fatal errors.
+        // gdv_fn_context_set_error_msg(context, "url_decoder: Incomplete trailing escape (%) pattern");
         *out_len = input_len;
         return input;
       }
@@ -1850,8 +1854,13 @@ const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool
     ret[i] = reverse_ret[*out_len - i - 1];
   }
 
+  // To avoid the attempt of allocating 0 byte memory.
+  if (*out_len == 0) {
+    *out_valid = false;
+    return "";
+  }
   char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, *out_len));
-  if (ret == nullptr) {
+  if (out_str == nullptr) {
     gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
     *out_len = 0;
     *out_valid = false;

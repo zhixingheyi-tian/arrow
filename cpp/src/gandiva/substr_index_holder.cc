@@ -34,7 +34,7 @@ Status SubstrIndexHolder::Make(std::shared_ptr<SubstrIndexHolder>* holder) {
 const char* SubstrIndexHolder::operator()(gandiva::ExecutionContext* ctx, std::string input_str, 
                           std::string delim, int count, int32_t* out_len) {
   // No need to find delim when count = 0 and just return "".
-  if (count == 0) {
+  if (count == 0 || input_str.length() == 0) {
     *out_len = 0;
     return "";
   }
@@ -69,6 +69,7 @@ const char* SubstrIndexHolder::operator()(gandiva::ExecutionContext* ctx, std::s
   }
 
   if (index == std::string::npos) {
+    // The case of 0 input length is handled in the begining of this func.
     *out_len = static_cast<int32_t>(input_str.length());
     char* result_buffer = reinterpret_cast<char*>(ctx->arena()->Allocate(*out_len));
     if (result_buffer == NULLPTR) {
