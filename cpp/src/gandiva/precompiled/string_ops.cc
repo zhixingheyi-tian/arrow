@@ -1800,38 +1800,58 @@ const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool
     return ""; 
   }
 
+  if (*input == '0' && input_len == 1) {
+    *out_len = 1;
+    *out_valid = true;
+    return "0";
+  }
+
   // Consistent with spark, only support base belonging to [2, 36].
   const int MIN_BASE = 2;
   const int MAX_BASE = 36;
   if (from_base < MIN_BASE || from_base > MAX_BASE ||
-      fabs(to_base) < MIN_BASE || fabs(to_base) > MAX_BASE) {
+      std::abs(to_base) < MIN_BASE || std::abs(to_base) > MAX_BASE) {
     *out_len = 0;
     *out_valid = false;
     return "";
-  } 
+  }
 
   from_base = from_base < 0 ? -from_base : from_base;
   bool is_negative_input;
+  char* input_chars = (char*)malloc(input_len + 1);
+  memcpy(input_chars, input, input_len);
+  input_chars[input_len] = '\0';
   unsigned long unsigned_decimal_value;
   if (input[0] == '-') {
     is_negative_input = true;
-    unsigned_decimal_value = strtoul(input + 1, nullptr, from_base);
+    // We cannot directly pass `input` to strtoul, because `input` can point to
+    // consecutively cached data.
+    unsigned_decimal_value = strtoul(input_chars + 1, nullptr, from_base);
   } else {
     is_negative_input = false;
-    unsigned_decimal_value = strtoul(input, nullptr, from_base);
+    unsigned_decimal_value = strtoul(input_chars, nullptr, from_base);
   }
+  free(input_chars);
 
   bool has_negative_mark = false;
+  const unsigned long MAX_UNSIGNED_INT64 = 0xFFFFFFFFFFFFFFFF;
   if (is_negative_input && to_base < 0) {
     has_negative_mark = true;
   } else if (is_negative_input && to_base > 0) {
     // Use the max value for 64-bit to convert it to positive.
-    unsigned_decimal_value = strtoul("FFFFFFFFFFFFFFFF", nullptr, 16) - unsigned_decimal_value + 1;
+    unsigned_decimal_value = MAX_UNSIGNED_INT64 - unsigned_decimal_value + 1;
   }
   to_base = to_base < 0 ? -to_base : to_base;
 
-  char reverse_ret[64];
-  int i = 0;
+  char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, 64));
+  if (out_str == nullptr) {
+    gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
+    *out_len = 0;
+    *out_valid = false;
+    return "";
+  }
+
+  int i = 63;
   while (unsigned_decimal_value > 0) {
     int remainder = unsigned_decimal_value % to_base;
     char c;
@@ -1840,35 +1860,22 @@ const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool
     } else { 
       c = (char)(remainder - 10 + (int)'A');
     }
-    reverse_ret[i] = c;
-    i++;
+    out_str[i] = c;
+    i--;
     unsigned_decimal_value = unsigned_decimal_value / to_base;
   }
   if (has_negative_mark) {
-    reverse_ret[i] = '-';
-    i++;
+    out_str[i] = '-';
+    i--;
   }
-  *out_len = i;
-  char ret[*out_len];
-  for (int i = 0; i < *out_len; i++) {
-    ret[i] = reverse_ret[*out_len - i - 1];
-  }
-
-  // To avoid the attempt of allocating 0 byte memory.
+  *out_len = 64 - i - 1;
   if (*out_len == 0) {
     *out_valid = false;
     return "";
   }
-  char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, *out_len));
-  if (out_str == nullptr) {
-    gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
-    *out_len = 0;
-    *out_valid = false;
-    return "";
-  }
-  memcpy(out_str, ret, *out_len);
+
   *out_valid = true;
-  return out_str;
+  return out_str + i + 1;
 }
 
 // Gets a binary object and returns its hexadecimal representation. That representation

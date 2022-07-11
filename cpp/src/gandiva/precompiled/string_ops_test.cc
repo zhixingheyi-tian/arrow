@@ -21,6 +21,10 @@
 #include "gandiva/execution_context.h"
 #include "gandiva/precompiled/types.h"
 
+#include <iostream>
+#include <ctime>
+#include <chrono>
+
 namespace gandiva {
 
 TEST(TestStringOps, TestCompare) {
@@ -1369,7 +1373,7 @@ TEST(TestStringOps, TestConv) {
   EXPECT_EQ(std::string(out_str, out_len), expected_str);
 
   // Space is contained in input string.
-  out_str = conv(ctx_ptr, " 15 ", 2, true, 10, true, 16, true, &out_valid, &out_len);
+  out_str = conv(ctx_ptr, " 15 ", 4, true, 10, true, 16, true, &out_valid, &out_len);
   EXPECT_EQ(out_len, 1);
   EXPECT_EQ(std::string(out_str, out_len), "F");
 
@@ -1397,6 +1401,50 @@ TEST(TestStringOps, TestConv) {
   // Should return null for Empty input.
   out_str = conv(ctx_ptr, "", 0, true, 10, true, 16, true, &out_valid, &out_len);
   EXPECT_EQ(out_valid, false);
+
+  // "0" as input.
+  out_str = conv(ctx_ptr, "0", 1, true, 10, true, 16, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string(out_str, out_len), "0");
+}
+
+TEST(TestStringOps, TestConvPerf) {
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  gdv_int32 out_len = 0;
+  const char* out_str;
+  bool out_valid;
+
+  struct Test_case
+  {
+    std::string input;
+    int from_base;
+    int to_base;
+  };
+  Test_case test_cases[9];
+  test_cases[0] = {"48787873", 10, 2};
+  test_cases[1] = {"11011110001111100", 2, 10};
+  test_cases[2] = {"15343434334", 10, 16};
+  test_cases[3] = {"bigbig", 36, 16};
+  test_cases[4] = {"9223372036854775807", 36, 16};
+  test_cases[5] = {"-1523232332", 10, -16};
+  test_cases[6] = {"-1523232332", 10, 16};
+  test_cases[7] = {"-101023222AB", 16, -10};
+  test_cases[8] = {"101011110000111", 2, 16};
+  
+  using namespace std::chrono;
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+  for (int i = 0; i < 900000; i++) {
+    out_str = conv(ctx_ptr, test_cases[i % 9].input.c_str(),
+     test_cases[i % 9].input.length(), true, test_cases[i % 9].from_base,
+      true, test_cases[i % 9].to_base, true, &out_valid, &out_len);
+  }
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  duration<double, std::milli> time_span = t2 - t1;
+  std::cout <<"*******" << std::endl;
+  std::cout << "It took me " << time_span.count() << " milliseconds.\n";
+  std::cout <<"*******" << std::endl;
 }
 
 TEST(TestStringOps, TestToHex) {
