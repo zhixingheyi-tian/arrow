@@ -36,7 +36,7 @@ TEST(TestArithmeticOps, TestIsDistinctFrom) {
 
 TEST(TestArithmeticOps, TestMod) {
   gandiva::ExecutionContext context;
-  EXPECT_EQ(mod_int64_int32(10, 0), 10);
+  EXPECT_EQ(mod_int32_int32(10, 0), 10);
 
   const double acceptable_abs_error = 0.00000000001;  // 1e-10
 

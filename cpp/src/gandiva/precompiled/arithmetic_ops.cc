@@ -95,10 +95,19 @@ gdv_boolean isNaN_float32(gdv_float32 val) { return isnan(val) || isinf(val); }
 FORCE_INLINE
 gdv_boolean isNaN_float64(gdv_float64 val) { return isnan(val) || isinf(val); }
 
-MOD_OP(mod, int64, int32, int32)
+MOD_OP(mod, int32, int32, int32)
 MOD_OP(mod, int64, int64, int64)
 
 #undef MOD_OP
+
+gdv_float32 mod_float32_float32(int64_t context, gdv_float32 x, gdv_float32 y) {
+  if (y == 0.0) {
+    // char const* err_msg = "divide by zero error";
+    // gdv_fn_context_set_error_msg(context, err_msg);
+    return 0.0;
+  }
+  return fmod(x, y);
+}
 
 gdv_float64 mod_float64_float64(int64_t context, gdv_float64 x, gdv_float64 y) {
   if (y == 0.0) {
