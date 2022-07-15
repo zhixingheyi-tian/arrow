@@ -875,6 +875,31 @@ gdv_timestamp castTIMESTAMP_with_validation_check_utf8(int64_t context, const ch
 }
 
 
+// Convert yyyyMMddHHmmss to yyyy-MM-dd HH:mm:ss
+gdv_timestamp castTIMESTAMP_withCarrying_withoutSep_utf8(int64_t context, const char* input,
+                                              gdv_int32 length, bool in_valid,
+                                              bool* out_valid) {
+  char formated_input[19];
+  int i = 0, j = 0;
+  while (i < 19) {
+    if (i == 4 || i == 7) {
+      formated_input[i] = '-';
+      i++;
+    } else if (i == 10) {
+      formated_input[i] = ' ';
+      i++;
+    } else if (i == 13 || i == 16) {
+      formated_input[i] = ':';
+      i++;
+    } else {
+      formated_input[i] = input[j];
+      i++;
+      j++;
+    }
+  }
+  return castTIMESTAMP_withCarrying_utf8(context, formated_input, 19, in_valid, out_valid);
+}
+
 /*
  * Input consists of mandatory and optional fields.
  * Mandatory fields are year, month and day.

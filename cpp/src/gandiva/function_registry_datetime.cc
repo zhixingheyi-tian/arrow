@@ -61,6 +61,10 @@ std::vector<NativeFunction> GetDateTimeFunctionRegistry() {
                      kResultNullInternal, "castTIMESTAMP_with_validation_check_utf8",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
 
+      NativeFunction("castTIMESTAMP_withCarrying_withoutSep", {}, DataTypeVector{utf8()}, timestamp(),
+                     kResultNullInternal, "castTIMESTAMP_withCarrying_withoutSep_utf8",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
       NativeFunction("castTIMESTAMP_withCarrying", {}, DataTypeVector{utf8()}, timestamp(),
                      kResultNullInternal, "castTIMESTAMP_withCarrying_utf8",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
