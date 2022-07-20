@@ -879,9 +879,13 @@ gdv_timestamp castTIMESTAMP_with_validation_check_utf8(int64_t context, const ch
 gdv_timestamp castTIMESTAMP_withCarrying_withoutSep_utf8(int64_t context, const char* input,
                                               gdv_int32 length, bool in_valid,
                                               bool* out_valid) {
+  if (!in_valid) {
+    *out_valid = false;
+    return 0;
+  }
   char formated_input[19];
   int i = 0, j = 0;
-  while (i < 19) {
+  while (i < 19 && j < length) {
     if (i == 4 || i == 7) {
       formated_input[i] = '-';
       i++;
@@ -1001,8 +1005,10 @@ gdv_timestamp castTIMESTAMP_withCarrying_utf8(int64_t context, const char* input
     err = gdv_fn_time_with_zone(&ts_fields[0], (input + index), (length - index),
                                 &ret_time);
     if (err) {
-      const char* msg = "Invalid timestamp or unknown zone for timestamp value ";
-      set_error_for_date(length, input, msg, context);
+      // Suppress the exception and return null for being compatible with spark.
+      // const char* msg = "Invalid timestamp or unknown zone for timestamp value ";
+      // set_error_for_date(length, input, msg, context);
+      *out_valid = false;
       return 0;
     }
     return ret_time;
