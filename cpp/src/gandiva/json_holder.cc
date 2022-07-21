@@ -21,6 +21,9 @@
 
 #include "gandiva/node.h"
 #include "gandiva/regex_util.h"
+#include <sstream>
+
+using namespace simdjson;
 
 namespace gandiva {
 
@@ -33,39 +36,94 @@ Status JsonHolder::Make(std::shared_ptr<JsonHolder>* holder) {
   return Status::OK();
 }
 
-const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std::string& json_str, const std::string& json_path, int32_t* out_len) {
-  std::unique_ptr<arrow::json::BlockParser> parser;
-  (arrow::json::BlockParser::Make(parse_options_, &parser));
-  (parser->Parse(std::make_shared<arrow::Buffer>(json_str)));
-  std::shared_ptr<arrow::Array> parsed;
-  (parser->Finish(&parsed));
-  auto struct_parsed = std::dynamic_pointer_cast<arrow::StructArray>(parsed);
-  //json_path example: $.col_14, will extract col_14 here
+error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<std::string> fields,
+ std::string_view* res) {
+ switch (raw_res.type()) {
+   case ondemand::json_type::number: {
+      std::stringstream ss;
+      double num_res;
+      auto error = raw_res.get_double().get(num_res);
+      if (!error) {
+        ss << num_res;
+        *res = ss.str();
+      }
+      return error;
+    }
+   case ondemand::json_type::string: {
+     auto error = raw_res.get_string().get(*res);
+     return error;
+    }
+   case ondemand::json_type::boolean: {
+     bool bool_res;
+     raw_res.get_bool().get(bool_res);
+     if (bool_res) {
+       *res = "true";
+     } else {
+       *res = "false";
+     }
+     return error_code::SUCCESS;
+    }
+   case ondemand::json_type::object: {
+     // For nested case, e.g., for "{"my": {"hello": 10}}", ".$my" will return an object type.
+     auto obj = raw_res.get_object();
+     assert(fields.size() > 0);
+     auto inner_result = obj[fields[0]];
+     fields.erase(fields.begin());
+     return handle_types(inner_result, fields, res);
+    }
+   case ondemand::json_type::array: {
+     // Not supported.
+     return error_code::UNSUPPORTED_ARCHITECTURE;
+    }
+   case ondemand::json_type::null: {
+     return error_code::UNSUPPORTED_ARCHITECTURE;
+    }
+  }
+}
+
+const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std::string& json_str,
+ const std::string& json_path, int32_t* out_len) {
+  padded_string padded_input(json_str);
+  ondemand::document doc;
+  try {
+    doc = parser_->iterate(padded_input);
+  } catch (simdjson_error& e) {
+    return nullptr;
+  }
   if (json_path.length() < 3) {
     return nullptr;
   }
-  auto col_name = json_path.substr(2);
-  // illegal json string.
-  if (struct_parsed == nullptr) {
+
+  // Follow spark's format for specifying a field, e.g., ".$a.b".
+  auto raw_field_name = json_path.substr(2);
+  std::vector<std::string> fields;
+  while (raw_field_name.find(".") != std::string::npos) {
+    auto ind = raw_field_name.find(".");
+    fields.push_back(raw_field_name.substr(0, ind));
+    raw_field_name = raw_field_name.substr(ind + 1);
+  }
+  fields.push_back(raw_field_name);
+
+  // Illegal case.
+  if (fields.size() < 1) {
     return nullptr;
   }
-  auto dict_parsed = std::dynamic_pointer_cast<arrow::DictionaryArray>(
-      struct_parsed->GetFieldByName(col_name));
-  // no data contained for given field.
-  if (dict_parsed == nullptr) {
+
+  auto raw_res = doc.find_field(fields[0]);
+  error_code error;
+  std::string_view res;
+  fields.erase(fields.begin());
+  try {
+    error = handle_types(raw_res, fields, &res);
+  } catch(...) {
     return nullptr;
   }
-  auto dict_array = dict_parsed->dictionary();
-  // needs to see whether there is a case that has more than one indices.
-  auto res_index = dict_parsed->GetValueIndex(0);
-  auto utf8_array = std::dynamic_pointer_cast<arrow::BinaryArray>(dict_array);
-  auto res = utf8_array->GetValue(res_index, out_len);
-  // empty string case.
-  if (*out_len == 0) {
-    return reinterpret_cast<const uint8_t*>("");
+  if (error) {
+   return nullptr;
   }
+  *out_len = res.length();
   uint8_t* result_buffer = reinterpret_cast<uint8_t*>(ctx->arena()->Allocate(*out_len));
-  memcpy(result_buffer, std::string((char*)res, *out_len).data(), *out_len);
+  memcpy(result_buffer, res.data(), *out_len);
   return result_buffer;
 }
 

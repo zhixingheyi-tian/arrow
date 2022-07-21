@@ -85,6 +85,7 @@ set(SRC_FILES
     rlike_holder.cc
     like_holder.cc
     json_holder.cc
+    simdjson.cpp
     translate_holder.cc
     literal_holder.cc
     projector.cc
