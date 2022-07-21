@@ -121,7 +121,11 @@ const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std:
   if (error) {
    return nullptr;
   }
+
   *out_len = res.length();
+  if (*out_len == 0) {
+    return reinterpret_cast<const uint8_t*>("");
+  }
   uint8_t* result_buffer = reinterpret_cast<uint8_t*>(ctx->arena()->Allocate(*out_len));
   memcpy(result_buffer, res.data(), *out_len);
   return result_buffer;
