@@ -32,3 +32,16 @@ to install pre-compiled binary versions of the library.
 Please refer to our latest [C++ Development Documentation][1].
 
 [1]: https://github.com/apache/arrow/blob/master/docs/source/developers/cpp
+
+## Run parquet string scan benchmark
+#### Minimal benchmark build
+cd arrow
+mkdir -p cpp/debug
+cd cpp/debug
+cmake -DCMAKE_BUILD_TYPE=Release -DARROW_BUILD_BENCHMARKS=ON -DARROW_WITH_ZLIB=ON -DARROW_JEMALLOC=OFF -DARROW_PARQUET=ON -DARROW_COMPUTE=ON -DARROW_DATASET=ON -DARROW_WITH_SNAPPY=ON -DARROW_FILESYSTEM=ON ..
+
+#### Run benchmark and collect perf data
+cpp/debug
+./release/parquet-arrow-parquet-scan-string-benchmark --iterations 10  --threads 1  --file {parquet_path} --cpu 0 &
+perf record -e cycles:ppp -C 0 sleep 10
+
