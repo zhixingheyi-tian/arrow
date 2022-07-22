@@ -44,4 +44,5 @@ cmake -DCMAKE_BUILD_TYPE=Release -DARROW_BUILD_BENCHMARKS=ON -DARROW_WITH_ZLIB=O
 cpp/debug
 ./release/parquet-arrow-parquet-scan-string-benchmark --iterations 10  --threads 1  --file {parquet_path} --cpu 0 &
 perf record -e cycles:ppp -C 0 sleep 10
+perf report
 
