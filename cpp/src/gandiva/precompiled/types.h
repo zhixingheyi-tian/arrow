@@ -550,6 +550,9 @@ double castFLOAT8_utf8(int64_t context, const char* data, int32_t len);
 
 const char* url_decoder(gdv_int64 context, const char* input, gdv_int32 input_len, gdv_int32* out_len);
 
+int32_t find_in_set_utf8_utf8(int64_t context, const char* to_find, int32_t to_find_len,
+                              const char* string_list, int32_t string_list_len);
+
 const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool in1_valid,
                  gdv_int32 from_base, bool in2_valid, gdv_int32 to_base, bool in3_valid,
                  bool* out_valid, gdv_int32* out_len);

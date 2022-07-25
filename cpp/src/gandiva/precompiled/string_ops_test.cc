@@ -1673,4 +1673,27 @@ TEST(TestStringOps, TestFromHex) {
       ::testing::HasSubstr("Error parsing hex string, one or more bytes are not valid."));
   ctx.Reset();
 }
+
+TEST(TestStringOps, TestFindInSet) {
+  gandiva::ExecutionContext ctx;
+  auto ctx_ptr = reinterpret_cast<int64_t>(&ctx);
+  int32_t result;
+  result = find_in_set_utf8_utf8(ctx_ptr, "EE", 2, ",A,B,C,D,EE,F", 13);
+  EXPECT_EQ(result, 6);
+  result = find_in_set_utf8_utf8(ctx_ptr, "A", 1, "A,B,C,D,EE,F", 12);
+  EXPECT_EQ(result, 1);
+  result = find_in_set_utf8_utf8(ctx_ptr, "AAAB", 4, "A,B,C,D,EE,F", 12);
+  EXPECT_EQ(result, 0);
+  result = find_in_set_utf8_utf8(ctx_ptr, "E,E", 3, "A,B,C,D,EE,F", 12);
+  EXPECT_EQ(result, 0);
+  result = find_in_set_utf8_utf8(ctx_ptr, "C", 1, "A,B,,,,,,,C,,,,,", 16);
+  EXPECT_EQ(result, 9);
+  result = find_in_set_utf8_utf8(ctx_ptr, "", 0, "", 0);
+  EXPECT_EQ(result, 1);
+  result = find_in_set_utf8_utf8(ctx_ptr, "", 0, " ", 1);
+  EXPECT_EQ(result, 0);
+  result = find_in_set_utf8_utf8(ctx_ptr, " ", 1, "", 0);
+  EXPECT_EQ(result, 0);
+}
+
 }  // namespace gandiva

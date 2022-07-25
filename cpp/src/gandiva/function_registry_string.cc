@@ -356,6 +356,10 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
       NativeFunction("from_hex", {"unhex"}, DataTypeVector{utf8()}, binary(),
                      kResultNullIfNull, "from_hex_utf8", NativeFunction::kNeedsContext),
 
+      NativeFunction("find_in_set", {}, DataTypeVector{utf8(), utf8()}, int32(),
+                     kResultNullIfNull, "find_in_set_utf8_utf8",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
       NativeFunction("conv", {}, DataTypeVector{utf8(), int32(), int32()}, utf8(),
                      kResultNullInternal, "conv",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)};
