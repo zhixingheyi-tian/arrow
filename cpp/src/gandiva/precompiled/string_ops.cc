@@ -1878,6 +1878,59 @@ const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool
   return out_str + i + 1;
 }
 
+
+FORCE_INLINE
+const char* conv_int64_to_binary(gdv_int64 context, gdv_int64 input, bool in_valid,
+                                 bool* out_valid, gdv_int32* out_len) {
+  if (!in_valid) {
+    *out_valid = false;
+    *out_len = 0;
+    return "";
+  }
+
+  if (input == 0) {
+    *out_valid = true;
+    *out_len = 1;
+    return "0";
+  }
+
+  const unsigned long MAX_UNSIGNED_INT64 = 0xFFFFFFFFFFFFFFFF;
+  unsigned long unsigned_input;
+  if (input < 0) {
+    unsigned_input = MAX_UNSIGNED_INT64 + input + 1;
+  } else {
+    unsigned_input = input;
+  }
+
+  char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, 64));
+  if (out_str == nullptr) {
+    gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
+    *out_len = 0;
+    *out_valid = false;
+    return "";
+  }
+  int i = 63;
+  while (unsigned_input > 0) {
+    int remainder = unsigned_input & 1;
+    if (remainder == 0) {
+      out_str[i] = '0';
+    } else {
+      out_str[i] = '1';
+    }
+    i--;
+    unsigned_input = unsigned_input >> 1;
+  }
+  *out_len = 64 - i - 1;
+  if (*out_len == 0) {
+    *out_valid = false;
+    return "";
+  }
+
+  *out_valid = true;
+  return out_str + i + 1;
+}
+
+
 // Gets a binary object and returns its hexadecimal representation. That representation
 // maps each byte in the input to a 2-length string containing a hexadecimal number.
 // - Examples:

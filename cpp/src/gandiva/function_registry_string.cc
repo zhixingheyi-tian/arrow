@@ -360,6 +360,10 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
                      kResultNullIfNull, "find_in_set_utf8_utf8",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
 
+      NativeFunction("conv_to_binary", {}, DataTypeVector{int64()}, utf8(),
+                     kResultNullInternal, "conv_int64_to_binary",
+                     NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors),
+
       NativeFunction("conv", {}, DataTypeVector{utf8(), int32(), int32()}, utf8(),
                      kResultNullInternal, "conv",
                      NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)};
