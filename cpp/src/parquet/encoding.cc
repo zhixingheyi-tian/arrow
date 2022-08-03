@@ -48,6 +48,14 @@
 #include "parquet/schema.h"
 #include "parquet/types.h"
 
+#include<iostream>
+#include "parquet/arrow/utils/macros.h"
+
+extern int64_t elapse_page_read;
+extern int64_t elapse_decompress;
+extern int64_t elapse_decode;
+extern int64_t elapse_array_build;
+
 namespace BitUtil = arrow::BitUtil;
 
 using arrow::Status;
@@ -1635,6 +1643,7 @@ void DictDecoderImpl<ByteArrayType>::SetDict(TypedDecoder<ByteArrayType>* dictio
                                   /*shrink_to_fit=*/false));
 
   int32_t offset = 0;
+  auto start = std::chrono::steady_clock::now(); 
   uint8_t* bytes_data = byte_array_data_->mutable_data();
   int32_t* bytes_offsets =
       reinterpret_cast<int32_t*>(byte_array_offsets_->mutable_data());
@@ -1644,6 +1653,10 @@ void DictDecoderImpl<ByteArrayType>::SetDict(TypedDecoder<ByteArrayType>* dictio
     dict_values[i].ptr = bytes_data + offset;
     offset += dict_values[i].len;
   }
+  auto end = std::chrono::steady_clock::now();
+  elapse_decode += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+  std::cout << "ByteArrayType :elapse_decode: " << elapse_decode << std::endl;
+
   bytes_offsets[dictionary_length_] = offset;
 }
 
@@ -1656,6 +1669,7 @@ inline void DictDecoderImpl<FLBAType>::SetDict(TypedDecoder<FLBAType>* dictionar
   int fixed_len = descr_->type_length();
   int total_size = dictionary_length_ * fixed_len;
 
+  auto start = std::chrono::steady_clock::now(); 
   PARQUET_THROW_NOT_OK(byte_array_data_->Resize(total_size,
                                                 /*shrink_to_fit=*/false));
   uint8_t* bytes_data = byte_array_data_->mutable_data();
@@ -1663,6 +1677,9 @@ inline void DictDecoderImpl<FLBAType>::SetDict(TypedDecoder<FLBAType>* dictionar
     memcpy(bytes_data + offset, dict_values[i].ptr, fixed_len);
     dict_values[i].ptr = bytes_data + offset;
   }
+  auto end = std::chrono::steady_clock::now();
+  elapse_decode += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+  std::cout << "FLBAType :elapse_decode: " << elapse_decode << std::endl;
 }
 
 template <>
@@ -1871,6 +1888,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     auto dict_values = reinterpret_cast<const ByteArray*>(dictionary_->data());
     int values_decoded = 0;
     int num_appended = 0;
+    auto start = std::chrono::steady_clock::now();
     while (num_appended < num_values) {
       bool is_valid = bit_reader.IsSet();
       bit_reader.Next();
@@ -1916,6 +1934,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
         ++num_appended;
       }
     }
+    auto end = std::chrono::steady_clock::now(); 
+    elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    
+    std::cout << "DecodeArrowDense:elapse_array_build: " << elapse_array_build << std::endl;
+    
     *out_num_values = values_decoded;
     return Status::OK();
   }
@@ -1930,6 +1953,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     ArrowBinaryHelper helper(out);
     auto dict_values = reinterpret_cast<const ByteArray*>(dictionary_->data());
 
+    auto start = std::chrono::steady_clock::now();
     while (values_decoded < num_values) {
       int32_t batch_size = std::min<int32_t>(kBufferSize, num_values - values_decoded);
       int num_indices = idx_decoder_.GetBatch(indices, batch_size);
@@ -1945,6 +1969,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
       }
       values_decoded += num_indices;
     }
+     auto end = std::chrono::steady_clock::now(); 
+    elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    
+    std::cout << "DecodeArrowDenseNonNull: elapse_array_build: " << elapse_array_build << std::endl;
+    
     *out_num_values = values_decoded;
     return Status::OK();
   }

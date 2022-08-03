@@ -401,6 +401,8 @@ add_parquet_benchmark(level_conversion_benchmark)
 add_parquet_benchmark(arrow/reader_writer_benchmark PREFIX "parquet-arrow")
 add_parquet_benchmark(arrow/parquet_scan_benchmark PREFIX "parquet-arrow")
 add_parquet_benchmark(arrow/parquet_scan_string_benchmark PREFIX "parquet-arrow")
+add_parquet_benchmark(arrow/parquet_scan_string_benchmark_backtrace PREFIX "parquet-arrow")
+add_parquet_benchmark(arrow/parquet_scan_int64_benchmark PREFIX "parquet-arrow")
 
 if(ARROW_WITH_BROTLI)
   add_definitions(-DARROW_WITH_BROTLI)

@@ -23,6 +23,12 @@
 
 #include "parquet/arrow/utils/exception.h"
 
+// extern int64_t elapse_page_read = 0;
+// extern int64_t elapse_decompress = 0;
+// extern int64_t elapse_decode = 0;
+// extern int64_t elapse_array_build = 0;
+
+
 #define TIME_NANO_DIFF(finish, start) \
   (finish.tv_sec - start.tv_sec) * 1000000000 + (finish.tv_nsec - start.tv_nsec)
 

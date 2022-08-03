@@ -52,11 +52,19 @@
 #include "parquet/thrift_internal.h"  // IWYU pragma: keep
 // Required after "arrow/util/int_util_internal.h" (for OPTIONAL)
 #include "parquet/windows_compatibility.h"
+#include "parquet/arrow/utils/macros.h"
 
 using arrow::MemoryPool;
 using arrow::internal::AddWithOverflow;
 using arrow::internal::checked_cast;
 using arrow::internal::MultiplyWithOverflow;
+
+
+int64_t elapse_page_read = 0;
+int64_t elapse_decompress = 0;
+int64_t elapse_decode = 0;
+int64_t elapse_array_build = 0;
+
 
 namespace BitUtil = arrow::BitUtil;
 
@@ -370,7 +378,12 @@ std::shared_ptr<Page> SerializedPageReader::NextPage() {
     }
 
     // Read the compressed data page.
+    auto start = std::chrono::steady_clock::now();  
     PARQUET_ASSIGN_OR_THROW(auto page_buffer, stream_->Read(compressed_len));
+    auto end = std::chrono::steady_clock::now(); 
+    elapse_page_read += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    std::cout << "elapse_page_read: " << elapse_page_read << std::endl;
+
     if (page_buffer->size() != compressed_len) {
       std::stringstream ss;
       ss << "Page was smaller (" << page_buffer->size() << ") than expected ("
@@ -483,6 +496,8 @@ std::shared_ptr<Buffer> SerializedPageReader::DecompressIfNeeded(
     PARQUET_THROW_NOT_OK(decompression_buffer_->Resize(uncompressed_len, false));
   }
 
+  auto startd = std::chrono::steady_clock::now();   
+
   if (levels_byte_len > 0) {
     // First copy the levels as-is
     uint8_t* decompressed = decompression_buffer_->mutable_data();
@@ -494,6 +509,10 @@ std::shared_ptr<Buffer> SerializedPageReader::DecompressIfNeeded(
       compressed_len - levels_byte_len, page_buffer->data() + levels_byte_len,
       uncompressed_len - levels_byte_len,
       decompression_buffer_->mutable_data() + levels_byte_len));
+
+  auto endd = std::chrono::steady_clock::now();  
+  elapse_decompress += std::chrono::duration_cast<std::chrono::nanoseconds>(endd - startd).count(); 
+  std::cout << "elapse_decompress: " << elapse_decompress << std::endl;
 
   return decompression_buffer_;
 }
