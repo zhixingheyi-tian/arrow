@@ -24,6 +24,8 @@
 #include <string>
 #include <utility>
 
+#include <immintrin.h>
+
 #include "arrow/buffer.h"
 #include "arrow/status.h"
 #include "arrow/util/bit_util.h"
@@ -109,7 +111,7 @@ class ARROW_EXPORT BufferBuilder {
   /// \brief Append the given data to the buffer
   ///
   /// The buffer is automatically expanded if necessary.
-  Status Append(const void* data, const int64_t length) {
+  inline __attribute__((always_inline)) Status Append(const void* data, const int64_t length) {
     if (ARROW_PREDICT_FALSE(size_ + length > capacity_)) {
       ARROW_RETURN_NOT_OK(Resize(GrowByFactor(capacity_, size_ + length), false));
     }
@@ -134,8 +136,20 @@ class ARROW_EXPORT BufferBuilder {
 
   // Unsafe methods don't check existing size
   void UnsafeAppend(const void* data, const int64_t length) {
-    memcpy(data_ + size_, data, static_cast<size_t>(length));
+    // memcpy(data_ + size_, data, static_cast<size_t>(length));
+    memcpy_avx512(data_ + size_, data, static_cast<size_t>(length));
     size_ += length;
+  }
+
+  void memcpy_avx512(void* dest, const void* src, size_t length) {
+    uint32_t k;
+    for (k = 0; k + 32 < length; k += 32) {
+      __m256i v = _mm256_loadu_si256((const __m256i*)(src + k));
+      _mm256_storeu_si256((__m256i*)(dest + k), v);
+    }
+    auto mask = (1L << (length - k)) - 1;
+    __m256i v = _mm256_maskz_loadu_epi8(mask, src + k);
+    _mm256_mask_storeu_epi8(dest + k, mask, v);
   }
 
   void UnsafeAppend(const int64_t num_copies, uint8_t value) {

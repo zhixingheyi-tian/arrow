@@ -24,6 +24,8 @@
 #include <limits>
 #include <memory>
 
+#include <immintrin.h>
+
 #if defined(sun) || defined(__sun)
 #include <stdlib.h>
 #endif
@@ -214,6 +216,17 @@ class SystemAllocator {
     return Status::OK();
   }
 
+  //  static void memcpy_avx512(void* dest, const void* src, size_t length) {
+  //   uint32_t k;
+  //   for (k = 0; k + 32 < length; k += 32) {
+  //     __m256i v = _mm256_loadu_si256((const __m256i*)(src + k));
+  //     _mm256_storeu_si256((__m256i*)(dest + k), v);
+  //   }
+  //   auto mask = (1L << (length - k)) - 1;
+  //   __m256i v = _mm256_maskz_loadu_epi8(mask, src + k);
+  //   _mm256_mask_storeu_epi8(dest + k, mask, v);
+  // }
+
   static Status ReallocateAligned(int64_t old_size, int64_t new_size, uint8_t** ptr) {
     uint8_t* previous_ptr = *ptr;
     if (previous_ptr == zero_size_area) {
@@ -233,6 +246,7 @@ class SystemAllocator {
     DCHECK(out);
     // Copy contents and release old memory chunk
     memcpy(out, *ptr, static_cast<size_t>(std::min(new_size, old_size)));
+    // memcpy_avx512(out, *ptr, static_cast<size_t>(std::min(new_size, old_size)));
 #ifdef _WIN32
     _aligned_free(*ptr);
 #else

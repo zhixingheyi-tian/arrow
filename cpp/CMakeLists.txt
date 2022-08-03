@@ -48,7 +48,8 @@ if(POLICY CMP0074)
 endif()
 
 set(ARROW_VERSION "4.0.0")
-add_compile_options(-g)
+#add_compile_options(-g)
+add_compile_options(-g -march=native)
 
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" ARROW_BASE_VERSION "${ARROW_VERSION}")
 
