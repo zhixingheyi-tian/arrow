@@ -35,8 +35,14 @@ namespace gandiva {
 #define HASH_SHA1_NULL_NEVER_FN(name, ALIASES) \
   NUMERIC_BOOL_DATE_VAR_LEN_TYPES(HASH_SHA1_NULL_NEVER, name, ALIASES)
 
+#define HASH_SHA2_NULL_NEVER_FN(name, ALIASES) \
+  NUMERIC_BOOL_DATE_VAR_LEN_TYPES(HASH_SHA2_NULL_NEVER, name, ALIASES)
+
 #define HASH_SHA256_NULL_NEVER_FN(name, ALIASES) \
   NUMERIC_BOOL_DATE_VAR_LEN_TYPES(HASH_SHA256_NULL_NEVER, name, ALIASES)
+
+#define HASH_MD5_NULL_NEVER_FN(name, ALIASES) \
+  NUMERIC_BOOL_DATE_VAR_LEN_TYPES(HASH_MD5_NULL_NEVER, name, ALIASES)
 
 std::vector<NativeFunction> GetHashFunctionRegistry() {
   static std::vector<NativeFunction> hash_fn_registry_ = {
@@ -72,9 +78,13 @@ std::vector<NativeFunction> GetHashFunctionRegistry() {
       HASH64_SEED_SAFE_NULL_NEVER_FN(hash64, {}),
       HASH64_SEED_SAFE_NULL_NEVER_FN(hash64AsDouble, {}),
 
-      HASH_SHA1_NULL_NEVER_FN(hashSHA1, {}),
+      HASH_SHA1_NULL_NEVER_FN(hashSHA1, {"sha1"}),
 
-      HASH_SHA256_NULL_NEVER_FN(hashSHA256, {})};
+      HASH_SHA2_NULL_NEVER_FN(hashSHA2, {"sha2"}),
+
+      HASH_SHA256_NULL_NEVER_FN(hashSHA256, {"sha256"}),
+
+      HASH_MD5_NULL_NEVER_FN(hashMD5, {"md5"})};
 
   return hash_fn_registry_;
 }

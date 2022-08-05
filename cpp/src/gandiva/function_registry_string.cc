@@ -112,21 +112,25 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
                      kResultNullIfNull, "castVARCHAR_int16_int64",
                      NativeFunction::kNeedsContext),
 
-      NativeFunction("castVARCHAR", {}, DataTypeVector{int32(), int64()}, utf8(),
-                     kResultNullIfNull, "castVARCHAR_int32_int64",
-                     NativeFunction::kNeedsContext),
+      // There are other implementations that can replace the below functions, e.g.,
+      // gdv_fn_castVARCHAR_int32_int64, etc., which can get the same result as spark
+      // in handling cases like cast(2.0 as string) without extra zeros appended after
+      // the casting.
+      // NativeFunction("castVARCHAR", {}, DataTypeVector{int32(), int64()}, utf8(),
+      //                kResultNullIfNull, "castVARCHAR_int32_int64",
+      //                NativeFunction::kNeedsContext),
 
-      NativeFunction("castVARCHAR", {}, DataTypeVector{int64(), int64()}, utf8(),
-                     kResultNullIfNull, "castVARCHAR_int64_int64",
-                     NativeFunction::kNeedsContext),
+      // NativeFunction("castVARCHAR", {}, DataTypeVector{int64(), int64()}, utf8(),
+      //                kResultNullIfNull, "castVARCHAR_int64_int64",
+      //                NativeFunction::kNeedsContext),
 
-      NativeFunction("castVARCHAR", {}, DataTypeVector{float32(), int64()}, utf8(),
-                     kResultNullIfNull, "castVARCHAR_float32_int64",
-                     NativeFunction::kNeedsContext),
+      // NativeFunction("castVARCHAR", {}, DataTypeVector{float32(), int64()}, utf8(),
+      //                kResultNullIfNull, "castVARCHAR_float32_int64",
+      //                NativeFunction::kNeedsContext),
 
-      NativeFunction("castVARCHAR", {}, DataTypeVector{float64(), int64()}, utf8(),
-                     kResultNullIfNull, "castVARCHAR_float64_int64",
-                     NativeFunction::kNeedsContext),
+      // NativeFunction("castVARCHAR", {}, DataTypeVector{float64(), int64()}, utf8(),
+      //                kResultNullIfNull, "castVARCHAR_float64_int64",
+      //                NativeFunction::kNeedsContext),
 
       NativeFunction("castVARCHAR", {}, DataTypeVector{boolean(), int64()}, utf8(),
                      kResultNullIfNull, "castVARCHAR_bool_int64",
