@@ -221,6 +221,18 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
                      NativeFunction::kNeedsFunctionHolder |
                      NativeFunction::kCanReturnErrors),
 
+      NativeFunction("parse_url", {}, DataTypeVector{utf8(), utf8()}, utf8(),
+                     kResultNullIfNull, "gdv_fn_parse_url_utf8_utf8",
+                     NativeFunction::kNeedsContext |
+                     NativeFunction::kNeedsFunctionHolder |
+                     NativeFunction::kCanReturnErrors),
+
+      NativeFunction("parse_url", {}, DataTypeVector{utf8(), utf8(), utf8()}, utf8(),
+                     kResultNullIfNull, "gdv_fn_parse_url_utf8_utf8_utf8",
+                     NativeFunction::kNeedsContext |
+                     NativeFunction::kNeedsFunctionHolder |
+                     NativeFunction::kCanReturnErrors),
+
       NativeFunction("lpad", {}, DataTypeVector{utf8(), int32(), utf8()}, utf8(),
                      kResultNullIfNull, "lpad_utf8_int32_utf8",
                      NativeFunction::kNeedsContext),

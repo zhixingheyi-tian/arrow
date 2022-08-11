@@ -141,7 +141,11 @@ bool Uri::has_host() const { return IsTextRangeSet(impl_->uri_.hostText); }
 
 std::string Uri::port_text() const { return TextRangeToString(impl_->uri_.portText); }
 
+bool Uri::has_port() const { return IsTextRangeSet(impl_->uri_.portText); }
+
 int32_t Uri::port() const { return impl_->port_; }
+
+std::string Uri::user_info() const { return TextRangeToString(impl_->uri_.userInfo); }
 
 std::string Uri::username() const {
   auto userpass = TextRangeToView(impl_->uri_.userInfo);
@@ -193,6 +197,8 @@ std::string Uri::path() const {
 }
 
 std::string Uri::query_string() const { return TextRangeToString(impl_->uri_.query); }
+
+bool Uri::has_query() const { return IsTextRangeSet(impl_->uri_.query); }
 
 Result<std::vector<std::pair<std::string, std::string>>> Uri::query_items() const {
   const auto& query = impl_->uri_.query;

@@ -92,6 +92,7 @@ set(SRC_FILES
     regex_util.cc
     replace_holder.cc
     extract_holder.cc
+    parse_url_holder.cc
     selection_vector.cc
     tree_expr_builder.cc
     to_date_holder.cc
@@ -241,6 +242,7 @@ add_gandiva_test(internals-test
                  like_holder_test.cc
                  replace_holder_test.cc
                  extract_holder_test.cc
+                 parse_url_holder_test.cc
                  decimal_type_util_test.cc
                  random_generator_holder_test.cc
                  substr_index_holder_test.cc

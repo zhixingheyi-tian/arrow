@@ -56,10 +56,14 @@ class ARROW_EXPORT Uri {
   /// The URI port number, as a string such as "80", or the empty string is the URI
   /// does not have a port number component.
   std::string port_text() const;
+  /// Whether the URI has an explicit port.
+  bool has_port() const;
   /// The URI port parsed as an integer, or -1 if the URI does not have a port
   /// number component.
   int32_t port() const;
 
+  /// The userInfo specified in the URI.
+  std::string user_info() const;
   /// The username specified in the URI.
   std::string username() const;
   /// The password specified in the URI.
@@ -70,6 +74,8 @@ class ARROW_EXPORT Uri {
 
   /// The URI query string
   std::string query_string() const;
+  /// Whether the URI has an explicit query.
+  bool has_query() const;
 
   /// The URI query items
   ///

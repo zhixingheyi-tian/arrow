@@ -32,6 +32,7 @@
 #include "gandiva/replace_holder.h"
 #include "gandiva/rlike_holder.h"
 #include "gandiva/extract_holder.h"
+#include "gandiva/parse_url_holder.h"
 #include "gandiva/to_date_holder.h"
 #include "gandiva/translate_holder.h"
 #include "gandiva/substr_index_holder.h"
@@ -76,6 +77,7 @@ class FunctionHolderRegistry {
         {"rand", LAMBDA_MAKER(RandomGeneratorHolder)},
         {"regexp_replace", LAMBDA_MAKER(ReplaceHolder)},
         {"regexp_extract", LAMBDA_MAKER(ExtractHolder)},
+        {"parse_url", LAMBDA_MAKER(ParseUrlHolder)},
         {"translate", LAMBDA_MAKER(TranslateHolder)},
         {"substr_index", LAMBDA_MAKER(SubstrIndexHolder)}
     };
