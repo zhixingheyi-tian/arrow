@@ -64,6 +64,9 @@ int64_t elapse_page_read = 0;
 int64_t elapse_decompress = 0;
 int64_t elapse_decode = 0;
 int64_t elapse_array_build = 0;
+int64_t plain_elapse_array_build = 0;
+int64_t plain_elapse_buffer_memcpy = 0;
+int64_t dict_elapse_buffer_memcpy = 0;
 
 
 namespace BitUtil = arrow::BitUtil;

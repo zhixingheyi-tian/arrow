@@ -71,15 +71,15 @@ class GoogleBenchmarkParquetStringScan {
 
     auto num_columns = schema->num_fields();
     std::cout << "Enter Type::INT64 Check: " << std::endl;
-    // for (int i = 0; i < num_columns; ++i) {
-    //   auto field = schema->field(i);
-    //   auto type = field->type();
-    //   if (type->id() == Type::INT64) {
-    //     std::cout << "Type::INT64 colIndex: " << i << std::endl;
-    //     column_indices.push_back(i);
-    //   }
-    // }
-    column_indices.push_back(0);
+    for (int i = 0; i < num_columns; ++i) {
+      auto field = schema->field(i);
+      auto type = field->type();
+      if (type->id() == Type::INT64) {
+        std::cout << "Type::INT64 colIndex: " << i << std::endl;
+        column_indices.push_back(i);
+      }
+    }
+    // column_indices.push_back(0);
   }
 
   virtual void operator()(benchmark::State& state) {}
@@ -143,7 +143,7 @@ class GoogleBenchmarkParquetStringScan_IteratorScan_Benchmark
       std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
       ASSERT_NOT_OK(parquet_reader->GetRecordBatchReader(
           row_group_indices, local_column_indices, &record_batch_reader));
-      // do {
+      do {
         TIME_NANO_OR_THROW(elapse_read, record_batch_reader->ReadNext(&record_batch));
 
         if (record_batch) {
@@ -151,7 +151,7 @@ class GoogleBenchmarkParquetStringScan_IteratorScan_Benchmark
           num_batches += 1;
           num_rows += record_batch->num_rows();
         }
-      // } while (record_batch);
+      } while (record_batch);
 
       std::cout << " parquet parse done elapsed time = " << elapse_read / 1000000
               << " rows = " << num_rows << std::endl;

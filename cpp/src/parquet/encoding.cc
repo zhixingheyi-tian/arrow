@@ -55,6 +55,9 @@ extern int64_t elapse_page_read;
 extern int64_t elapse_decompress;
 extern int64_t elapse_decode;
 extern int64_t elapse_array_build;
+extern int64_t plain_elapse_array_build;
+extern int64_t plain_elapse_buffer_memcpy;
+extern int64_t dict_elapse_buffer_memcpy;
 
 namespace BitUtil = arrow::BitUtil;
 
@@ -1062,10 +1065,15 @@ inline int DecodePlain(const uint8_t* data, int64_t data_size, int num_values,
   if (bytes_to_decode > data_size || bytes_to_decode > INT_MAX) {
     ParquetException::EofException();
   }
+  auto start = std::chrono::steady_clock::now();
   // If bytes_to_decode == 0, data could be null
   if (bytes_to_decode > 0) {
     memcpy(out, data, bytes_to_decode);
   }
+  auto end = std::chrono::steady_clock::now(); 
+  plain_elapse_buffer_memcpy += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+  std::cout << "PlainDecoder DecodeArrowDense: plain_elapse_buffer_memcpy: " << plain_elapse_buffer_memcpy << std::endl;
+
   return static_cast<int>(bytes_to_decode);
 }
 
@@ -1371,6 +1379,8 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
     RETURN_NOT_OK(helper.builder->ReserveData(
         std::min<int64_t>(len_, helper.chunk_space_remaining)));
 
+    auto start = std::chrono::steady_clock::now();
+
     int i = 0;
     RETURN_NOT_OK(VisitNullBitmapInline(
         valid_bits, valid_bits_offset, num_values, null_count,
@@ -1405,6 +1415,10 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
           ++i;
           return Status::OK();
         }));
+
+    auto end = std::chrono::steady_clock::now(); 
+    plain_elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    std::cout << "PlainDecoder DecodeArrowDense: plain_elapse_array_build: " << plain_elapse_array_build << std::endl;
 
     num_values_ -= values_decoded;
     *out_values_decoded = values_decoded;
@@ -1504,12 +1518,17 @@ class DictDecoderImpl : public DecoderImpl, virtual public DictDecoder<Type> {
   int DecodeSpaced(T* buffer, int num_values, int null_count, const uint8_t* valid_bits,
                    int64_t valid_bits_offset) override {
     num_values = std::min(num_values, num_values_);
+    auto start = std::chrono::steady_clock::now();
     if (num_values != idx_decoder_.GetBatchWithDictSpaced(
                           reinterpret_cast<const T*>(dictionary_->data()),
                           dictionary_length_, buffer, num_values, null_count, valid_bits,
                           valid_bits_offset)) {
       ParquetException::EofException();
     }
+    auto end = std::chrono::steady_clock::now(); 
+    dict_elapse_buffer_memcpy += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    std::cout << "PlainDecoder DecodeSpaced: dict_elapse_buffer_memcpy: " << dict_elapse_buffer_memcpy << std::endl;
+    
     num_values_ -= num_values;
     return num_values;
   }
