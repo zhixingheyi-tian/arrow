@@ -226,6 +226,8 @@ class RecordReader {
   /// \brief Pre-allocate space for data. Results in better flat read performance
   virtual void Reserve(int64_t num_values) = 0;
 
+  virtual void ReserveValues(int64_t capacity) {}
+
   /// \brief Clear consumed values and repetition/definition levels as the
   /// result of calling ReadRecords
   virtual void Reset() = 0;
@@ -233,6 +235,10 @@ class RecordReader {
   /// \brief Transfer filled values buffer to caller. A new one will be
   /// allocated in subsequent ReadRecords calls
   virtual std::shared_ptr<ResizableBuffer> ReleaseValues() = 0;
+
+  virtual std::shared_ptr<ResizableBuffer> ReleaseOffsets() {
+    return nullptr;
+  }
 
   /// \brief Transfer filled validity bitmap buffer to caller. A new one will
   /// be allocated in subsequent ReadRecords calls

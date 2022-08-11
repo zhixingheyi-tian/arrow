@@ -38,6 +38,7 @@
 // namespace benchmark {
 
 const int batch_buffer_size = 32768;
+// const int batch_buffer_size = 2;
 
 class GoogleBenchmarkParquetStringScan {
  public:
