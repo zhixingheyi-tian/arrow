@@ -581,8 +581,8 @@ if(NOT MSVC)
     set(CXX_FLAGS_FASTDEBUG "-g -O1")
   endif()
 
-  set(C_FLAGS_RELEASE "-g -O0")
-  set(CXX_FLAGS_RELEASE "-g -O0")
+  set(C_FLAGS_RELEASE "-O3 -DNDEBUG")
+  set(CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 endif()
 
 set(C_FLAGS_PROFILE_GEN "${CXX_FLAGS_RELEASE} -fprofile-generate")
