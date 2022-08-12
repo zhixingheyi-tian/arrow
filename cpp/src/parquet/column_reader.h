@@ -21,6 +21,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "parquet/exception.h"
 #include "parquet/level_conversion.h"
@@ -112,6 +113,12 @@ class PARQUET_EXPORT PageReader {
   virtual std::shared_ptr<Page> NextPage() = 0;
 
   virtual void set_max_page_header_size(uint32_t size) = 0;
+
+  void set_metrics(Metrics *metrics) {
+    metrics_ = metrics;
+  }
+
+  Metrics *metrics_;
 };
 
 class PARQUET_EXPORT ColumnReader {
@@ -219,6 +226,10 @@ class RecordReader {
 
   virtual ~RecordReader() = default;
 
+  // virtual ~RecordReader() {
+  //   std::cout << "~RecordReader() destructor" << std::endl;
+  // }
+
   /// \brief Attempt to read indicated number of records from column chunk
   /// \return number of records read
   virtual int64_t ReadRecords(int64_t num_records) = 0;
@@ -280,6 +291,13 @@ class RecordReader {
 
   /// \brief True if reading directly as Arrow dictionary-encoded
   bool read_dictionary() const { return read_dictionary_; }
+
+
+  void set_metrics(Metrics *metrics) {
+    metrics_ = metrics;
+  }
+
+  Metrics *metrics_;
 
  protected:
   bool nullable_values_;

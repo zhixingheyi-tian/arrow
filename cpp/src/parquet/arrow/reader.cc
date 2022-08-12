@@ -22,6 +22,9 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <iostream>
+#include <chrono>
+#include <iomanip>
 
 #include "arrow/array.h"
 #include "arrow/buffer.h"
@@ -43,6 +46,7 @@
 #include "parquet/metadata.h"
 #include "parquet/properties.h"
 #include "parquet/schema.h"
+#include "parquet/types.h"
 
 using arrow::Array;
 using arrow::ArrayData;
@@ -129,7 +133,8 @@ std::shared_ptr<std::unordered_set<int>> VectorToSharedSet(
 
 // Forward declaration
 Status GetReader(const SchemaField& field, const std::shared_ptr<ReaderContext>& context,
-                 std::unique_ptr<ColumnReaderImpl>* out);
+                 std::unique_ptr<ColumnReaderImpl>* out,
+                 Metrics *metrics);
 
 // ----------------------------------------------------------------------
 // FileReaderImpl forward declaration
@@ -141,6 +146,17 @@ class FileReaderImpl : public FileReader {
       : pool_(pool),
         reader_(std::move(reader)),
         reader_properties_(std::move(properties)) {}
+
+  ~FileReaderImpl() {
+    std::time_t t = std::time(nullptr);
+    // std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << std::endl;
+    
+    std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << "  ~FileReaderImpl(): " << std::endl;
+    std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << "  metrics_.elapse_page_read: " << metrics_.elapse_page_read << std::endl;
+    std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << "  metrics_.elapse_decompress: " << metrics_.elapse_decompress << std::endl;
+    std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << "  metrics_.dict_elapse_array_build: " << metrics_.dict_elapse_array_build << std::endl;
+    std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << "  metrics_.plain_elapse_array_build: " << metrics_.plain_elapse_array_build << std::endl;
+  }
 
   Status Init() {
     return SchemaManifest::Make(reader_->metadata()->schema(),
@@ -199,20 +215,22 @@ class FileReaderImpl : public FileReader {
   Status GetFieldReader(int i,
                         const std::shared_ptr<std::unordered_set<int>>& included_leaves,
                         const std::vector<int>& row_groups,
-                        std::unique_ptr<ColumnReaderImpl>* out) {
+                        std::unique_ptr<ColumnReaderImpl>* out,
+                        Metrics *metrics) {
     auto ctx = std::make_shared<ReaderContext>();
     ctx->reader = reader_.get();
     ctx->pool = pool_;
     ctx->iterator_factory = SomeRowGroupsFactory(row_groups);
     ctx->filter_leaves = true;
     ctx->included_leaves = included_leaves;
-    return GetReader(manifest_.schema_fields[i], ctx, out);
+    return GetReader(manifest_.schema_fields[i], ctx, out, metrics);
   }
 
   Status GetFieldReaders(const std::vector<int>& column_indices,
                          const std::vector<int>& row_groups,
                          std::vector<std::shared_ptr<ColumnReaderImpl>>* out,
-                         std::shared_ptr<::arrow::Schema>* out_schema) {
+                         std::shared_ptr<::arrow::Schema>* out_schema,
+                         Metrics *metrics) {
     // We only need to read schema fields which have columns indicated
     // in the indices vector
     ARROW_ASSIGN_OR_RAISE(std::vector<int> field_indices,
@@ -225,8 +243,9 @@ class FileReaderImpl : public FileReader {
     for (size_t i = 0; i < out->size(); ++i) {
       std::unique_ptr<ColumnReaderImpl> reader;
       RETURN_NOT_OK(
-          GetFieldReader(field_indices[i], included_leaves, row_groups, &reader));
+          GetFieldReader(field_indices[i], included_leaves, row_groups, &reader, metrics));
 
+      // reader->set_metrics(&metrics_);
       out_fields[i] = reader->field();
       out->at(i) = std::move(reader);
     }
@@ -252,7 +271,7 @@ class FileReaderImpl : public FileReader {
     std::vector<int> row_groups = Iota(reader_->metadata()->num_row_groups());
 
     std::unique_ptr<ColumnReaderImpl> reader;
-    RETURN_NOT_OK(GetFieldReader(i, included_leaves, row_groups, &reader));
+    RETURN_NOT_OK(GetFieldReader(i, included_leaves, row_groups, &reader, NULLPTR));
 
     return ReadColumn(i, row_groups, reader.get(), out);
   }
@@ -340,6 +359,15 @@ class FileReaderImpl : public FileReader {
     return Status::OK();
     END_PARQUET_CATCH_EXCEPTIONS
   }
+  
+  Metrics metrics_ = {0,
+                     0,
+                     0,
+                     0,
+                     0,
+                     0,
+                     0,
+                    };
 
   MemoryPool* pool_;
   std::unique_ptr<ParquetFileReader> reader_;
@@ -414,13 +442,15 @@ class LeafReader : public ColumnReaderImpl {
  public:
   LeafReader(std::shared_ptr<ReaderContext> ctx, std::shared_ptr<Field> field,
              std::unique_ptr<FileColumnIterator> input,
-             ::parquet::internal::LevelInfo leaf_info)
+             ::parquet::internal::LevelInfo leaf_info, Metrics *metrics)
       : ctx_(std::move(ctx)),
         field_(std::move(field)),
         input_(std::move(input)),
-        descr_(input_->descr()) {
+        descr_(input_->descr()),
+        metrics_(metrics) {
     record_reader_ = RecordReader::Make(
         descr_, leaf_info, ctx_->pool, field_->type()->id() == ::arrow::Type::DICTIONARY);
+    record_reader_->set_metrics(metrics);
     NextRowGroup();
   }
 
@@ -468,10 +498,14 @@ class LeafReader : public ColumnReaderImpl {
 
   const std::shared_ptr<Field> field() override { return field_; }
 
+
+  Metrics *metrics_;
+
  private:
   std::shared_ptr<ChunkedArray> out_;
   void NextRowGroup() {
     std::unique_ptr<PageReader> page_reader = input_->NextChunk();
+    page_reader->set_metrics(record_reader_->metrics_);
     record_reader_->SetPageReader(std::move(page_reader));
   }
 
@@ -791,7 +825,8 @@ Status StructReader::BuildArray(int64_t length_upper_bound,
 
 Status GetReader(const SchemaField& field, const std::shared_ptr<Field>& arrow_field,
                  const std::shared_ptr<ReaderContext>& ctx,
-                 std::unique_ptr<ColumnReaderImpl>* out) {
+                 std::unique_ptr<ColumnReaderImpl>* out,
+                 Metrics *metrics) {
   BEGIN_PARQUET_CATCH_EXCEPTIONS
 
   auto type_id = arrow_field->type()->id();
@@ -799,7 +834,7 @@ Status GetReader(const SchemaField& field, const std::shared_ptr<Field>& arrow_f
   if (type_id == ::arrow::Type::EXTENSION) {
     auto storage_field = arrow_field->WithType(
         checked_cast<const ExtensionType&>(*arrow_field->type()).storage_type());
-    RETURN_NOT_OK(GetReader(field, storage_field, ctx, out));
+    RETURN_NOT_OK(GetReader(field, storage_field, ctx, out, metrics));
     out->reset(new ExtensionReader(arrow_field, std::move(*out)));
     return Status::OK();
   }
@@ -814,14 +849,14 @@ Status GetReader(const SchemaField& field, const std::shared_ptr<Field>& arrow_f
     }
     std::unique_ptr<FileColumnIterator> input(
         ctx->iterator_factory(field.column_index, ctx->reader));
-    out->reset(new LeafReader(ctx, arrow_field, std::move(input), field.level_info));
+    out->reset(new LeafReader(ctx, arrow_field, std::move(input), field.level_info, metrics));
   } else if (type_id == ::arrow::Type::LIST || type_id == ::arrow::Type::MAP ||
              type_id == ::arrow::Type::FIXED_SIZE_LIST ||
              type_id == ::arrow::Type::LARGE_LIST) {
     auto list_field = arrow_field;
     auto child = &field.children[0];
     std::unique_ptr<ColumnReaderImpl> child_reader;
-    RETURN_NOT_OK(GetReader(*child, ctx, &child_reader));
+    RETURN_NOT_OK(GetReader(*child, ctx, &child_reader, metrics));
     if (child_reader == nullptr) {
       *out = nullptr;
       return Status::OK();
@@ -850,7 +885,7 @@ Status GetReader(const SchemaField& field, const std::shared_ptr<Field>& arrow_f
     std::vector<std::unique_ptr<ColumnReaderImpl>> child_readers;
     for (const auto& child : field.children) {
       std::unique_ptr<ColumnReaderImpl> child_reader;
-      RETURN_NOT_OK(GetReader(child, ctx, &child_reader));
+      RETURN_NOT_OK(GetReader(child, ctx, &child_reader, metrics));
       if (!child_reader) {
         // If all children were pruned, then we do not try to read this field
         continue;
@@ -876,8 +911,9 @@ Status GetReader(const SchemaField& field, const std::shared_ptr<Field>& arrow_f
 }
 
 Status GetReader(const SchemaField& field, const std::shared_ptr<ReaderContext>& ctx,
-                 std::unique_ptr<ColumnReaderImpl>* out) {
-  return GetReader(field, field.field, ctx, out);
+                 std::unique_ptr<ColumnReaderImpl>* out,
+                 Metrics *metrics) {
+  return GetReader(field, field.field, ctx, out, metrics);
 }
 
 }  // namespace
@@ -898,7 +934,7 @@ Status FileReaderImpl::GetRecordBatchReader(const std::vector<int>& row_groups,
 
   std::vector<std::shared_ptr<ColumnReaderImpl>> readers;
   std::shared_ptr<::arrow::Schema> batch_schema;
-  RETURN_NOT_OK(GetFieldReaders(column_indices, row_groups, &readers, &batch_schema));
+  RETURN_NOT_OK(GetFieldReaders(column_indices, row_groups, &readers, &batch_schema, &metrics_));
 
   if (readers.empty()) {
     // Just generate all batches right now; they're cheap since they have no columns.
@@ -977,7 +1013,7 @@ Status FileReaderImpl::GetColumn(int i, FileColumnIteratorFactory iterator_facto
   ctx->iterator_factory = iterator_factory;
   ctx->filter_leaves = false;
   std::unique_ptr<ColumnReaderImpl> result;
-  RETURN_NOT_OK(GetReader(manifest_.schema_fields[i], ctx, &result));
+  RETURN_NOT_OK(GetReader(manifest_.schema_fields[i], ctx, &result, &metrics_));
   out->reset(result.release());
   return Status::OK();
 }
@@ -998,7 +1034,7 @@ Status FileReaderImpl::ReadRowGroups(const std::vector<int>& row_groups,
 
   std::vector<std::shared_ptr<ColumnReaderImpl>> readers;
   std::shared_ptr<::arrow::Schema> result_schema;
-  RETURN_NOT_OK(GetFieldReaders(column_indices, row_groups, &readers, &result_schema));
+  RETURN_NOT_OK(GetFieldReaders(column_indices, row_groups, &readers, &result_schema, &metrics_));
 
   ::arrow::ChunkedArrayVector columns(readers.size());
   RETURN_NOT_OK(::arrow::internal::OptionalParallelFor(

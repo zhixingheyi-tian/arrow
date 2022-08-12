@@ -28,6 +28,17 @@
 #include "parquet/platform.h"
 #include "parquet/types.h"
 
+// struct Metrics
+// {
+//         int64_t elapse_page_read = 0;
+//         int64_t elapse_decompress = 0;
+//         int64_t elapse_decode = 0;
+//         int64_t elapse_array_build = 0;
+//         int64_t plain_elapse_array_build = 0;
+//         int64_t plain_elapse_buffer_memcpy = 0;
+//         int64_t dict_elapse_buffer_memcpy = 0;
+// };
+
 namespace arrow {
 
 class Array;
@@ -262,6 +273,12 @@ class Decoder {
   // the number of values left in this page.
   virtual int values_left() const = 0;
   virtual Encoding::type encoding() const = 0;
+
+  void set_metrics(Metrics *metrics) {
+    metrics_ = metrics;
+  }
+
+  Metrics *metrics_;
 };
 
 template <typename DType>

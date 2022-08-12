@@ -59,7 +59,6 @@ using arrow::internal::AddWithOverflow;
 using arrow::internal::checked_cast;
 using arrow::internal::MultiplyWithOverflow;
 
-
 int64_t elapse_page_read = 0;
 int64_t elapse_decompress = 0;
 int64_t elapse_decode = 0;
@@ -67,7 +66,6 @@ int64_t elapse_array_build = 0;
 int64_t plain_elapse_array_build = 0;
 int64_t plain_elapse_buffer_memcpy = 0;
 int64_t dict_elapse_buffer_memcpy = 0;
-
 
 namespace BitUtil = arrow::BitUtil;
 
@@ -384,8 +382,8 @@ std::shared_ptr<Page> SerializedPageReader::NextPage() {
     auto start = std::chrono::steady_clock::now();  
     PARQUET_ASSIGN_OR_THROW(auto page_buffer, stream_->Read(compressed_len));
     auto end = std::chrono::steady_clock::now(); 
-    elapse_page_read += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    std::cout << "elapse_page_read: " << elapse_page_read << std::endl;
+    metrics_->elapse_page_read += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    // std::cout << "metrics_->elapse_page_read: " << metrics_->elapse_page_read << std::endl;
 
     if (page_buffer->size() != compressed_len) {
       std::stringstream ss;
@@ -514,8 +512,8 @@ std::shared_ptr<Buffer> SerializedPageReader::DecompressIfNeeded(
       decompression_buffer_->mutable_data() + levels_byte_len));
 
   auto endd = std::chrono::steady_clock::now();  
-  elapse_decompress += std::chrono::duration_cast<std::chrono::nanoseconds>(endd - startd).count(); 
-  std::cout << "elapse_decompress: " << elapse_decompress << std::endl;
+  metrics_->elapse_decompress += std::chrono::duration_cast<std::chrono::nanoseconds>(endd - startd).count(); 
+  // std::cout << "elapse_decompress: " << metrics_->elapse_decompress << std::endl;
 
   return decompression_buffer_;
 }
@@ -559,7 +557,8 @@ class ColumnReaderImplBase {
 
   virtual ~ColumnReaderImplBase() = default;
 
- protected:
+//  protected:
+  public:
   // Read up to batch_size values from the current data page into the
   // pre-allocated memory T*
   //
@@ -612,7 +611,7 @@ class ColumnReaderImplBase {
   }
 
   // Advance to the next data page
-  bool ReadNewPage() {
+  virtual bool ReadNewPage() {
     // Loop until we find the next data page.
     while (true) {
       current_page_ = pager_->NextPage();
@@ -1129,6 +1128,42 @@ class TypedRecordReader : public ColumnReaderImplBase<DType>,
     def_levels_ = AllocateBuffer(pool);
     rep_levels_ = AllocateBuffer(pool);
     Reset();
+  }
+
+  // Advance to the next data page
+  bool ReadNewPage() {
+    // Loop until we find the next data page.
+    while (true) {
+      this->current_page_ = this->pager_->NextPage();
+      if (!this->current_page_) {
+        // EOS
+        return false;
+      }
+
+      if (this->current_page_->type() == PageType::DICTIONARY_PAGE) {
+        this->ConfigureDictionary(static_cast<const DictionaryPage*>(this->current_page_.get()));
+        continue;
+      } else if (this->current_page_->type() == PageType::DATA_PAGE) {
+        const auto page = std::static_pointer_cast<DataPageV1>(this->current_page_);
+        const int64_t levels_byte_size = this->InitializeLevelDecoders(
+            *page, page->repetition_level_encoding(), page->definition_level_encoding());
+        this->InitializeDataDecoder(*page, levels_byte_size);
+        this->current_decoder_->set_metrics(metrics_);
+        return true;
+      } else if (this->current_page_->type() == PageType::DATA_PAGE_V2) {
+        const auto page = std::static_pointer_cast<DataPageV2>(this->current_page_);
+        int64_t levels_byte_size = this->InitializeLevelDecodersV2(*page);
+        this->InitializeDataDecoder(*page, levels_byte_size);
+        this->current_decoder_->set_metrics(metrics_);
+        return true;
+      } else {
+        // We don't know what this page type is. We're allowed to skip non-data
+        // pages.
+        continue;
+      }
+    }
+    this->current_decoder_->set_metrics(metrics_);
+    return true;
   }
 
   int64_t available_values_current_page() const {

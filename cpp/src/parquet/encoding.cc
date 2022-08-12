@@ -1065,14 +1065,14 @@ inline int DecodePlain(const uint8_t* data, int64_t data_size, int num_values,
   if (bytes_to_decode > data_size || bytes_to_decode > INT_MAX) {
     ParquetException::EofException();
   }
-  auto start = std::chrono::steady_clock::now();
+  // auto start = std::chrono::steady_clock::now();
   // If bytes_to_decode == 0, data could be null
   if (bytes_to_decode > 0) {
     memcpy(out, data, bytes_to_decode);
   }
-  auto end = std::chrono::steady_clock::now(); 
-  plain_elapse_buffer_memcpy += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
-  std::cout << "PlainDecoder DecodeArrowDense: plain_elapse_buffer_memcpy: " << plain_elapse_buffer_memcpy << std::endl;
+  // auto end = std::chrono::steady_clock::now(); 
+  // metrics_->plain_elapse_buffer_memcpy += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+  // std::cout << "PlainDecoder DecodeArrowDense: plain_elapse_buffer_memcpy: " << metrics_->plain_elapse_buffer_memcpy << std::endl;
 
   return static_cast<int>(bytes_to_decode);
 }
@@ -1417,8 +1417,8 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
         }));
 
     auto end = std::chrono::steady_clock::now(); 
-    plain_elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
-    std::cout << "PlainDecoder DecodeArrowDense: plain_elapse_array_build: " << plain_elapse_array_build << std::endl;
+    metrics_->plain_elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    // std::cout << "PlainDecoder DecodeArrowDense: plain_elapse_array_build: " << metrics_->plain_elapse_array_build << std::endl;
 
     num_values_ -= values_decoded;
     *out_values_decoded = values_decoded;
@@ -1526,8 +1526,8 @@ class DictDecoderImpl : public DecoderImpl, virtual public DictDecoder<Type> {
       ParquetException::EofException();
     }
     auto end = std::chrono::steady_clock::now(); 
-    dict_elapse_buffer_memcpy += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
-    std::cout << "PlainDecoder DecodeSpaced: dict_elapse_buffer_memcpy: " << dict_elapse_buffer_memcpy << std::endl;
+    metrics_->dict_elapse_buffer_memcpy += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    // std::cout << "PlainDecoder DecodeSpaced: dict_elapse_buffer_memcpy: " << metrics_->dict_elapse_buffer_memcpy << std::endl;
     
     num_values_ -= num_values;
     return num_values;
@@ -1662,7 +1662,7 @@ void DictDecoderImpl<ByteArrayType>::SetDict(TypedDecoder<ByteArrayType>* dictio
                                   /*shrink_to_fit=*/false));
 
   int32_t offset = 0;
-  auto start = std::chrono::steady_clock::now(); 
+  // auto start = std::chrono::steady_clock::now(); 
   uint8_t* bytes_data = byte_array_data_->mutable_data();
   int32_t* bytes_offsets =
       reinterpret_cast<int32_t*>(byte_array_offsets_->mutable_data());
@@ -1672,9 +1672,9 @@ void DictDecoderImpl<ByteArrayType>::SetDict(TypedDecoder<ByteArrayType>* dictio
     dict_values[i].ptr = bytes_data + offset;
     offset += dict_values[i].len;
   }
-  auto end = std::chrono::steady_clock::now();
-  elapse_decode += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
-  std::cout << "ByteArrayType :elapse_decode: " << elapse_decode << std::endl;
+  // auto end = std::chrono::steady_clock::now();
+  // metrics_->elapse_decode += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+  // std::cout << "ByteArrayType :elapse_decode: " << metrics_->elapse_decode << std::endl;
 
   bytes_offsets[dictionary_length_] = offset;
 }
@@ -1688,7 +1688,7 @@ inline void DictDecoderImpl<FLBAType>::SetDict(TypedDecoder<FLBAType>* dictionar
   int fixed_len = descr_->type_length();
   int total_size = dictionary_length_ * fixed_len;
 
-  auto start = std::chrono::steady_clock::now(); 
+  // auto start = std::chrono::steady_clock::now(); 
   PARQUET_THROW_NOT_OK(byte_array_data_->Resize(total_size,
                                                 /*shrink_to_fit=*/false));
   uint8_t* bytes_data = byte_array_data_->mutable_data();
@@ -1696,9 +1696,10 @@ inline void DictDecoderImpl<FLBAType>::SetDict(TypedDecoder<FLBAType>* dictionar
     memcpy(bytes_data + offset, dict_values[i].ptr, fixed_len);
     dict_values[i].ptr = bytes_data + offset;
   }
-  auto end = std::chrono::steady_clock::now();
-  elapse_decode += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
-  std::cout << "FLBAType :elapse_decode: " << elapse_decode << std::endl;
+  // auto end = std::chrono::steady_clock::now();
+  // metrics_->elapse_decode += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+  // std::cout << "FLBAType :elapse_decode: " << metrics_->elapse_decode << std::endl;
+
 }
 
 template <>
@@ -1954,9 +1955,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
       }
     }
     auto end = std::chrono::steady_clock::now(); 
-    elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    metrics_->dict_elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    // std::cout << "DecodeArrowDense:dict_elapse_array_build: " << metrics_->dict_elapse_array_build << std::endl;
     
-    std::cout << "DecodeArrowDense:elapse_array_build: " << elapse_array_build << std::endl;
+    // elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    // std::cout << "DecodeArrowDense:elapse_array_build: " << elapse_array_build << std::endl;
     
     *out_num_values = values_decoded;
     return Status::OK();
@@ -1989,9 +1992,12 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
       values_decoded += num_indices;
     }
      auto end = std::chrono::steady_clock::now(); 
-    elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    metrics_->dict_elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();   
+    // std::cout << "DecodeArrowDenseNonNull: dict_elapse_array_build: " << metrics_->dict_elapse_array_build << std::endl;
     
-    std::cout << "DecodeArrowDenseNonNull: elapse_array_build: " << elapse_array_build << std::endl;
+    // elapse_array_build += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(); 
+    // std::cout << "DecodeArrowDenseNonNull: elapse_array_build: " << elapse_array_build << std::endl;
+    
     
     *out_num_values = values_decoded;
     return Status::OK();

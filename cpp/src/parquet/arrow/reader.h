@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 #include "parquet/file_reader.h"
 #include "parquet/platform.h"
@@ -255,6 +256,10 @@ class ColumnChunkReader {
 class PARQUET_EXPORT ColumnReader {
  public:
   virtual ~ColumnReader() = default;
+
+  // virtual ~ColumnReader() {
+  //   std::cout << "~ColumnReader() destructor" << std::endl;
+  // }
 
   // Scan the next array of the indicated size. The actual size of the
   // returned array may be less than the passed size depending how much data is

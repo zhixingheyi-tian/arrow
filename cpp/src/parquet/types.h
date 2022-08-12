@@ -29,6 +29,28 @@
 #include "parquet/platform.h"
 #include "parquet/type_fwd.h"
 
+// struct Metrics
+// {
+//         int64_t elapse_page_read = 0;
+//         int64_t elapse_decompress = 0;
+//         int64_t elapse_decode = 0;
+//         int64_t dict_elapse_array_build = 0;
+//         int64_t plain_elapse_array_build = 0;
+//         int64_t dict_elapse_buffer_memcpy = 0;
+//         int64_t plain_elapse_buffer_memcpy = 0;
+// };
+
+struct Metrics
+{
+        int64_t elapse_page_read;
+        int64_t elapse_decompress;
+        int64_t elapse_decode;
+        int64_t dict_elapse_array_build;
+        int64_t plain_elapse_array_build;
+        int64_t dict_elapse_buffer_memcpy;
+        int64_t plain_elapse_buffer_memcpy;  
+};
+
 namespace arrow {
 namespace util {
 
