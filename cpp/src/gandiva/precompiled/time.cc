@@ -901,7 +901,7 @@ gdv_timestamp castTIMESTAMP_withCarrying_withoutSep_utf8(int64_t context, const 
       j++;
     }
   }
-  return castTIMESTAMP_withCarrying_utf8(context, formated_input, 19, in_valid, out_valid);
+  return castTIMESTAMP_withCarrying_utf8(context, formated_input, i, in_valid, out_valid);
 }
 
 /*

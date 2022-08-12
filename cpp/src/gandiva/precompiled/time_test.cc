@@ -145,6 +145,8 @@ TEST(TestTime, TestCastTimestampWithCarrying) {
   EXPECT_EQ(out_valid, false);
   castTIMESTAMP_withCarrying_utf8(context_ptr, "-", 1, true, &out_valid);
   EXPECT_EQ(out_valid, false);
+  castTIMESTAMP_withCarrying_withoutSep_utf8(context_ptr, "20060630", 8, true, &out_valid);
+  EXPECT_EQ(out_valid, true);
 }
 
 #ifndef _WIN32
