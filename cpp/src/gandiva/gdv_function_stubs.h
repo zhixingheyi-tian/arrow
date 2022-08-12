@@ -70,10 +70,6 @@ const char* gdv_fn_regexp_extract_utf8_utf8_int32(
     const char* /*pattern*/, int32_t /*pattern_len*/, const int32_t idx, int32_t* out_length);
 
 const char* gdv_fn_parse_url_utf8_utf8(
-        int64_t ptr, int64_t holder_ptr, const char* data, int32_t data_len,
-        const char* part, int32_t part_len, int32_t* out_length);
-
-const char* gdv_fn_parse_url_utf8_utf8(
     int64_t ptr, int64_t holder_ptr, const char* data, int32_t data_len, bool in1_valid,
     const char* part, int32_t part_len, bool in2_valid, bool* out_valid, int32_t* out_length);
 
