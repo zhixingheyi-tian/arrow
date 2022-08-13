@@ -36,9 +36,7 @@ namespace gandiva {
 /// Function Holder for SQL 'get_json_object'
 class GANDIVA_EXPORT JsonHolder : public FunctionHolder {
  public:
-  JsonHolder() {
-   parser_ = std::make_shared<ondemand::parser>();
-  }
+  JsonHolder() {}
   ~JsonHolder() override = default;
 
   static Status Make(const FunctionNode& node, std::shared_ptr<JsonHolder>* holder);
@@ -46,8 +44,6 @@ class GANDIVA_EXPORT JsonHolder : public FunctionHolder {
 
   //TODO(): should try to return const uint8_t *
   const uint8_t* operator()(ExecutionContext* ctx, const std::string& json_str, const std::string& json_path, int32_t* out_len);
-  
-  std::shared_ptr<ondemand::parser> parser_;
 };
 
 }  // namespace gandiva

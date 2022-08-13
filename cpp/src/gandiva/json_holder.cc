@@ -37,7 +37,7 @@ Status JsonHolder::Make(std::shared_ptr<JsonHolder>* holder) {
 }
 
 error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<std::string> fields,
- std::string_view* res) {
+ std::string* res) {
  switch (raw_res.type()) {
    case ondemand::json_type::number: {
       std::stringstream ss;
@@ -50,11 +50,13 @@ error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<st
       return error;
     }
    case ondemand::json_type::string: {
-     auto error = raw_res.get_string().get(*res);
+     std::string_view res_view;
+     auto error = raw_res.get_string().get(res_view);
+     *res = std::string(res_view);
      return error;
     }
    case ondemand::json_type::boolean: {
-     bool bool_res;
+     bool bool_res = false;
      raw_res.get_bool().get(bool_res);
      if (bool_res) {
        *res = "true";
@@ -66,7 +68,13 @@ error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<st
    case ondemand::json_type::object: {
      // For nested case, e.g., for "{"my": {"hello": 10}}", ".$my" will return an object type.
      auto obj = raw_res.get_object();
-     assert(fields.size() > 0);
+     // For the case that result is a json object.
+     if (fields.empty()) {
+       std::stringstream ss;
+       ss << obj;
+       *res = ss.str();
+       return error_code::SUCCESS;
+     }
      auto inner_result = obj[fields[0]];
      fields.erase(fields.begin());
      return handle_types(inner_result, fields, res);
@@ -84,16 +92,16 @@ error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<st
 const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std::string& json_str,
  const std::string& json_path, int32_t* out_len) {
   padded_string padded_input(json_str);
+  ondemand::parser parser;
   ondemand::document doc;
   try {
-    doc = parser_->iterate(padded_input);
+    doc = parser.iterate(padded_input);
   } catch (simdjson_error& e) {
     return nullptr;
   }
   if (json_path.length() < 3) {
     return nullptr;
   }
-
   // Follow spark's format for specifying a field, e.g., ".$a.b".
   auto raw_field_name = json_path.substr(2);
   std::vector<std::string> fields;
@@ -111,7 +119,7 @@ const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std:
 
   auto raw_res = doc.find_field(fields[0]);
   error_code error;
-  std::string_view res;
+  std::string res;
   fields.erase(fields.begin());
   try {
     error = handle_types(raw_res, fields, &res);
