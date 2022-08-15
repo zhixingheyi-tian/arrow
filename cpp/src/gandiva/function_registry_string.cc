@@ -222,13 +222,13 @@ std::vector<NativeFunction> GetStringFunctionRegistry() {
                      NativeFunction::kCanReturnErrors),
 
       NativeFunction("parse_url", {}, DataTypeVector{utf8(), utf8()}, utf8(),
-                     kResultNullIfNull, "gdv_fn_parse_url_utf8_utf8",
+                     kResultNullInternal, "gdv_fn_parse_url_utf8_utf8",
                      NativeFunction::kNeedsContext |
                      NativeFunction::kNeedsFunctionHolder |
                      NativeFunction::kCanReturnErrors),
 
       NativeFunction("parse_url", {}, DataTypeVector{utf8(), utf8(), utf8()}, utf8(),
-                     kResultNullIfNull, "gdv_fn_parse_url_utf8_utf8_utf8",
+                     kResultNullInternal, "gdv_fn_parse_url_utf8_utf8_utf8",
                      NativeFunction::kNeedsContext |
                      NativeFunction::kNeedsFunctionHolder |
                      NativeFunction::kCanReturnErrors),
