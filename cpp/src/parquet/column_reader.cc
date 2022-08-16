@@ -1577,7 +1577,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
         NULLPTR, (reinterpret_cast<int32_t *>(offset_->mutable_data()) + values_written_), 
         values_, 0, &accumulator_, &bianry_length_);
     DCHECK_EQ(num_decoded, values_to_read);
-    ResetValues();
+    // ResetValues();
   }
 
   // void ReadValuesSpaced(int64_t values_to_read, int64_t null_count) override {
@@ -1594,7 +1594,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
         valid_bits_->mutable_data(), (reinterpret_cast<int32_t *>(offset_->mutable_data()) + values_written_), 
         values_, values_written_, &accumulator_, &bianry_length_);
     DCHECK_EQ(num_decoded, values_to_read - null_count);
-    ResetValues();
+    // ResetValues();
   }
 
   void ReserveValues(int64_t extra_values) {

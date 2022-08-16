@@ -338,7 +338,7 @@ std::shared_ptr<Array> TransferBinaryZeroCopy(RecordReader* reader,
                                                   reader->ReleaseValues()};
   auto data = std::make_shared<::arrow::ArrayData>(type, reader->values_written(),
                                                    buffers, reader->null_count());
-  std::cout << "::arrow::MakeArray(data)->ToString():" << ::arrow::MakeArray(data)->ToString() << std::endl;
+  // std::cout << "::arrow::MakeArray(data)->ToString():" << ::arrow::MakeArray(data)->ToString() << std::endl;
   return ::arrow::MakeArray(data);
 }
 
