@@ -62,6 +62,8 @@ class ARROW_EXPORT Uri {
   /// number component.
   int32_t port() const;
 
+  /// Whether the URI has an userInfo.
+  bool has_user_info() const;
   /// The userInfo specified in the URI.
   std::string user_info() const;
   /// The username specified in the URI.
@@ -82,6 +84,11 @@ class ARROW_EXPORT Uri {
   /// Note this API doesn't allow differentiating between an empty value
   /// and a missing value, such in "a&b=1" vs. "a=&b=1".
   Result<std::vector<std::pair<std::string, std::string>>> query_items() const;
+
+  /// Whether the URI has an explicit fragment.
+  bool has_fragment() const;
+  /// The URI fragment string
+  std::string fragment() const;
 
   /// Get the string representation of this URI.
   const std::string& ToString() const;
