@@ -1447,6 +1447,35 @@ TEST(TestStringOps, TestConvPerf) {
   std::cout <<"*******" << std::endl;
 }
 
+TEST(TestStringOps, TestConvToBinary) {
+  gandiva::ExecutionContext ctx;
+  uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
+  gdv_int32 out_len = 0;
+  const char* out_str;
+  bool out_valid;
+
+  out_str = conv_int64_to_binary(ctx_ptr, 0, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "0");
+
+  out_str = conv_int64_to_binary(ctx_ptr, 4, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 3);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "100");
+
+  out_str = conv_int64_to_binary(ctx_ptr, 13, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 4);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "1101");
+
+  out_str = conv_int64_to_binary(ctx_ptr, -13, true, &out_valid, &out_len);
+  EXPECT_EQ(out_len, 64);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len),
+   "1111111111111111111111111111111111111111111111111111111111110011");
+}
+
 TEST(TestStringOps, TestToHex) {
   gandiva::ExecutionContext ctx;
   uint64_t ctx_ptr = reinterpret_cast<int64_t>(&ctx);
@@ -1673,4 +1702,27 @@ TEST(TestStringOps, TestFromHex) {
       ::testing::HasSubstr("Error parsing hex string, one or more bytes are not valid."));
   ctx.Reset();
 }
+
+TEST(TestStringOps, TestFindInSet) {
+  gandiva::ExecutionContext ctx;
+  auto ctx_ptr = reinterpret_cast<int64_t>(&ctx);
+  int32_t result;
+  result = find_in_set_utf8_utf8(ctx_ptr, "EE", 2, ",A,B,C,D,EE,F", 13);
+  EXPECT_EQ(result, 6);
+  result = find_in_set_utf8_utf8(ctx_ptr, "A", 1, "A,B,C,D,EE,F", 12);
+  EXPECT_EQ(result, 1);
+  result = find_in_set_utf8_utf8(ctx_ptr, "AAAB", 4, "A,B,C,D,EE,F", 12);
+  EXPECT_EQ(result, 0);
+  result = find_in_set_utf8_utf8(ctx_ptr, "E,E", 3, "A,B,C,D,EE,F", 12);
+  EXPECT_EQ(result, 0);
+  result = find_in_set_utf8_utf8(ctx_ptr, "C", 1, "A,B,,,,,,,C,,,,,", 16);
+  EXPECT_EQ(result, 9);
+  result = find_in_set_utf8_utf8(ctx_ptr, "", 0, "", 0);
+  EXPECT_EQ(result, 1);
+  result = find_in_set_utf8_utf8(ctx_ptr, "", 0, " ", 1);
+  EXPECT_EQ(result, 0);
+  result = find_in_set_utf8_utf8(ctx_ptr, " ", 1, "", 0);
+  EXPECT_EQ(result, 0);
+}
+
 }  // namespace gandiva

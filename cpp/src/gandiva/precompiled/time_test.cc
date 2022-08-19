@@ -132,6 +132,23 @@ TEST(TestTime, TestCastTimestamp) {
   context.Reset();
 }
 
+TEST(TestTime, TestCastTimestampWithCarrying) {
+  ExecutionContext context;
+  int64_t context_ptr = reinterpret_cast<int64_t>(&context);
+  bool out_valid;
+
+  EXPECT_EQ(castTIMESTAMP_withCarrying_withoutSep_utf8(context_ptr, "19700101000059",
+   14, true, &out_valid), 59000);
+  EXPECT_EQ(out_valid, true);
+
+  castTIMESTAMP_withCarrying_withoutSep_utf8(context_ptr, "-", 1, true, &out_valid);
+  EXPECT_EQ(out_valid, false);
+  castTIMESTAMP_withCarrying_utf8(context_ptr, "-", 1, true, &out_valid);
+  EXPECT_EQ(out_valid, false);
+  castTIMESTAMP_withCarrying_withoutSep_utf8(context_ptr, "20060630", 8, true, &out_valid);
+  EXPECT_EQ(out_valid, true);
+}
+
 #ifndef _WIN32
 
 // TODO(wesm): ARROW-4495. Need to address TZ database issues on Windows

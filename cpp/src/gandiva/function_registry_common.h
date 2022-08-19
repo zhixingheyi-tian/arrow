@@ -228,6 +228,17 @@ typedef std::unordered_map<const FunctionSignature*, const NativeFunction*, KeyH
                  utf8(), kResultNullNever, ARROW_STRINGIFY(gdv_fn_sha1_##TYPE),   \
                  NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)
 
+// HashSHA2 functions that :
+// - Needs to specify bits_length
+// - NULL handling is of type NULL_NEVER
+// - can return errors
+//
+// The function name includes the base name & input type name. gdv_fn_sha256_float64
+#define HASH_SHA2_NULL_NEVER(NAME, ALIASES, TYPE)                                          \
+  NativeFunction(#NAME, std::vector<std::string> ALIASES, DataTypeVector{TYPE(), int32()}, \
+                 utf8(), kResultNullNever, ARROW_STRINGIFY(gdv_fn_sha2_##TYPE##_int32),    \
+                 NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)
+
 // HashSHA256 functions that :
 // - NULL handling is of type NULL_NEVER
 // - can return errors
@@ -236,6 +247,16 @@ typedef std::unordered_map<const FunctionSignature*, const NativeFunction*, KeyH
 #define HASH_SHA256_NULL_NEVER(NAME, ALIASES, TYPE)                               \
   NativeFunction(#NAME, std::vector<std::string> ALIASES, DataTypeVector{TYPE()}, \
                  utf8(), kResultNullNever, ARROW_STRINGIFY(gdv_fn_sha256_##TYPE), \
+                 NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)
+
+// HashMD5 functions that :
+// - NULL handling is of type NULL_NEVER
+// - can return errors
+//
+// The function name includes the base name & input type name. gdv_fn_md5_float64
+#define HASH_MD5_NULL_NEVER(NAME, ALIASES, TYPE)                                          \
+  NativeFunction(#NAME, std::vector<std::string> ALIASES, DataTypeVector{TYPE()}, utf8(), \
+                 kResultNullNever, ARROW_STRINGIFY(gdv_fn_md5_##TYPE),                    \
                  NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)
 
 // Iterate the inner macro over all numeric types

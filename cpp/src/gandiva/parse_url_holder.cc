@@ -15,35 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#pragma once
-
-#include <memory>
-#include <string>
-
-#include "arrow/json/api.h"
-#include "arrow/json/parser.h"
-#include "arrow/status.h"
-#include "gandiva/execution_context.h"
-#include "gandiva/function_holder.h"
+#include "gandiva/parse_url_holder.h"
 #include "gandiva/node.h"
-#include "gandiva/simdjson.h"
-#include "gandiva/visibility.h"
-
-using namespace simdjson;
 
 namespace gandiva {
 
-/// Function Holder for SQL 'get_json_object'
-class GANDIVA_EXPORT JsonHolder : public FunctionHolder {
- public:
-  JsonHolder() {}
-  ~JsonHolder() override = default;
+  Status ParseUrlHolder::Make(const FunctionNode &node, std::shared_ptr <ParseUrlHolder> *holder) {
+    return Make(holder);
+  }
 
-  static Status Make(const FunctionNode& node, std::shared_ptr<JsonHolder>* holder);
-  static Status Make(std::shared_ptr<JsonHolder>* holder);
-
-  //TODO(): should try to return const uint8_t *
-  const uint8_t* operator()(ExecutionContext* ctx, const std::string& json_str, const std::string& json_path, int32_t* out_len);
-};
-
+  Status ParseUrlHolder::Make(std::shared_ptr<ParseUrlHolder>* holder) {
+    *holder = std::shared_ptr<ParseUrlHolder>(new ParseUrlHolder());
+    return Status::OK();
+  }
 }  // namespace gandiva

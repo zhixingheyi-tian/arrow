@@ -1707,16 +1707,16 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
 FORCE_INLINE
 const char* binary_string(gdv_int64 context, const char* text, gdv_int32 text_len,
                           gdv_int32* out_len) {
+  if (text_len == 0) {
+    *out_len = 0;
+    return "";
+  }
+
   gdv_binary ret =
       reinterpret_cast<gdv_binary>(gdv_fn_context_arena_malloc(context, text_len));
 
   if (ret == nullptr) {
     gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
-    *out_len = 0;
-    return "";
-  }
-
-  if (text_len == 0) {
     *out_len = 0;
     return "";
   }
@@ -1878,6 +1878,59 @@ const char* conv(gdv_int64 context, const char* input, gdv_int32 input_len, bool
   return out_str + i + 1;
 }
 
+
+FORCE_INLINE
+const char* conv_int64_to_binary(gdv_int64 context, gdv_int64 input, bool in_valid,
+                                 bool* out_valid, gdv_int32* out_len) {
+  if (!in_valid) {
+    *out_valid = false;
+    *out_len = 0;
+    return "";
+  }
+
+  if (input == 0) {
+    *out_valid = true;
+    *out_len = 1;
+    return "0";
+  }
+
+  const unsigned long MAX_UNSIGNED_INT64 = 0xFFFFFFFFFFFFFFFF;
+  unsigned long unsigned_input;
+  if (input < 0) {
+    unsigned_input = MAX_UNSIGNED_INT64 + input + 1;
+  } else {
+    unsigned_input = input;
+  }
+
+  char* out_str = reinterpret_cast<char*>(gdv_fn_context_arena_malloc(context, 64));
+  if (out_str == nullptr) {
+    gdv_fn_context_set_error_msg(context, "Could not allocate memory for output string");
+    *out_len = 0;
+    *out_valid = false;
+    return "";
+  }
+  int i = 63;
+  while (unsigned_input > 0) {
+    int remainder = unsigned_input & 1;
+    if (remainder == 0) {
+      out_str[i] = '0';
+    } else {
+      out_str[i] = '1';
+    }
+    i--;
+    unsigned_input = unsigned_input >> 1;
+  }
+  *out_len = 64 - i - 1;
+  if (*out_len == 0) {
+    *out_valid = false;
+    return "";
+  }
+
+  *out_valid = true;
+  return out_str + i + 1;
+}
+
+
 // Gets a binary object and returns its hexadecimal representation. That representation
 // maps each byte in the input to a 2-length string containing a hexadecimal number.
 // - Examples:
@@ -1991,4 +2044,46 @@ const char* from_hex_utf8(int64_t context, const char* text, int32_t text_len,
   *out_len = j;
   return ret;
 }
+
+FORCE_INLINE
+int32_t find_in_set_utf8_utf8(int64_t context, const char* to_find, int32_t to_find_len,
+                              const char* string_list, int32_t string_list_len) {
+  // Return 0 if to search entry have commas
+  if (is_substr_utf8_utf8(to_find, to_find_len, reinterpret_cast<const char*>(","), 1)) {
+    return 0;
+  }
+
+  int32_t cur_pos_in_array = 0;
+  int32_t cur_length = 0;
+  bool matching = true;
+
+  for (int i = 0; i < string_list_len; i++) {
+    if (string_list[i] == ',') {
+      cur_pos_in_array++;
+      if (matching && cur_length == to_find_len) {
+        return cur_pos_in_array;
+      } else {
+        matching = true;
+        cur_length = 0;
+      }
+    } else {
+      if (cur_length + 1 <= string_list_len) {
+        if (!matching || (memcmp(string_list + i, to_find + cur_length, 1))) {
+          matching = false;
+        }
+      } else {
+        matching = false;
+      }
+      cur_length++;
+    }
+  }
+
+  if (matching && cur_length == to_find_len) {
+    cur_pos_in_array++;
+    return cur_pos_in_array;
+  } else {
+    return 0;
+  }
+}
+
 }  // extern "C"
