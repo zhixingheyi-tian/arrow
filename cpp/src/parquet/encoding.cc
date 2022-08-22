@@ -2094,7 +2094,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
             // RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
             
             auto value_len = val.len;
-            (*bianry_length) += value_len;
             auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
             uint64_t capacity = values->capacity();
             if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
@@ -2102,6 +2101,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
               values->Reserve(capacity);
               dst_value = values->mutable_data() + (*bianry_length);
             }
+            (*bianry_length) += value_len;
             memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
             dst_value = dst_value + value_len;
 
@@ -2193,7 +2193,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
         // RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
 
         auto value_len = val.len;
-        (*bianry_length) += value_len;
         auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
         uint64_t capacity = values->capacity();
         if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
@@ -2201,6 +2200,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
           values->Reserve(capacity);
           dst_value = values->mutable_data() + (*bianry_length);
         }
+        (*bianry_length) += value_len;
         memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
         dst_value = dst_value + value_len;
 
