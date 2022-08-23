@@ -1602,9 +1602,9 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
         UpdateCapacity(values_capacity_, values_written_, extra_values);
     if (new_values_capacity > values_capacity_) {
       PARQUET_THROW_NOT_OK(
-          values_->Resize(bytes_for_values(new_values_capacity * 20), false));
+          values_->Resize(new_values_capacity * 20, false));
       PARQUET_THROW_NOT_OK(
-          offset_->Resize(bytes_for_values(new_values_capacity * 4), false));
+          offset_->Resize(new_values_capacity * 4, false));
 
       auto offset = reinterpret_cast<int32_t *>(offset_->mutable_data());
       offset[0] = 0;
