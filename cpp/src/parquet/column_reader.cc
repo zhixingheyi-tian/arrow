@@ -1602,7 +1602,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
         UpdateCapacity(values_capacity_, values_written_, extra_values);
     if (new_values_capacity > values_capacity_) {
       PARQUET_THROW_NOT_OK(
-          values_->Resize(new_values_capacity * 20, false));
+          values_->Resize(new_values_capacity * binary_per_row_length_, false));
       PARQUET_THROW_NOT_OK(
           offset_->Resize(new_values_capacity * 4, false));
 
@@ -1627,14 +1627,21 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
  std::shared_ptr<ResizableBuffer> ReleaseValues() override {
       auto result = values_;
       // PARQUET_THROW_NOT_OK(result->Resize(bytes_for_values(values_written_), true));
-      values_ = AllocateBuffer(this->pool_);
+      // values_ = AllocateBuffer(this->pool_);
       values_capacity_ = 0;
       return result;
   }
 
   std::shared_ptr<ResizableBuffer> ReleaseOffsets() {
       auto result = offset_;
-      offset_ = AllocateBuffer(this->pool_);
+      if (ARROW_PREDICT_FALSE(binary_per_row_length_ == kDefaultBinaryPerRowSzie)) {
+        auto offsetArr = reinterpret_cast<int32_t *>(offset_->mutable_data());
+        const auto first_offset = offsetArr[0];
+        const auto last_offset = offsetArr[values_written_];
+        binary_per_row_length_ = (last_offset - first_offset) / values_written_ + 1;
+        std::cout << "binary_per_row_length_:" << binary_per_row_length_ << std::endl;
+      }
+      // offset_ = AllocateBuffer(this->pool_);
       bianry_length_ = 0;
       return result;
   }
