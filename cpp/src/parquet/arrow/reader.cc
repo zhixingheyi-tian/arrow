@@ -22,6 +22,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "arrow/array.h"
 #include "arrow/buffer.h"
@@ -141,6 +142,10 @@ class FileReaderImpl : public FileReader {
       : pool_(pool),
         reader_(std::move(reader)),
         reader_properties_(std::move(properties)) {}
+  
+  ~FileReaderImpl() {
+     std::cout << "Patch version for fix OOM" << std::endl;
+  }
 
   Status Init() {
     return SchemaManifest::Make(reader_->metadata()->schema(),

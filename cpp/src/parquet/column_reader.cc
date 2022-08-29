@@ -1604,7 +1604,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
       PARQUET_THROW_NOT_OK(
           values_->Resize(new_values_capacity * 20, false));
       PARQUET_THROW_NOT_OK(
-          offset_->Resize(new_values_capacity * 4, false));
+          offset_->Resize((new_values_capacity+1) * 4, false));
 
       auto offset = reinterpret_cast<int32_t *>(offset_->mutable_data());
       offset[0] = 0;
