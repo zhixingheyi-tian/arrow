@@ -848,8 +848,10 @@ Java_org_apache_arrow_gandiva_evaluator_JniWrapper_evaluateProjector(
               "null");
           break;
         }
-        buffers.push_back(std::make_shared<JavaResizableBuffer>(
-            env, jexpander, output_vector_idx, value_buf, data_sz));
+        auto buf = std::make_shared<JavaResizableBuffer>(env, jexpander,
+          output_vector_idx, value_buf, data_sz);
+        buf->Resize(3970*16, false);
+        buffers.push_back(buf);
       } else {
         buffers.push_back(std::make_shared<arrow::MutableBuffer>(value_buf, data_sz));
       }
