@@ -1602,7 +1602,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
         UpdateCapacity(values_capacity_, values_written_, extra_values);
     if (new_values_capacity > values_capacity_) {
       PARQUET_THROW_NOT_OK(
-          values_->Resize(new_values_capacity * binary_per_row_length_, false));
+          values_->Resize(1, false));
       PARQUET_THROW_NOT_OK(
           offset_->Resize(new_values_capacity * 4, false));
 
