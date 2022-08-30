@@ -144,7 +144,7 @@ class FileReaderImpl : public FileReader {
         reader_properties_(std::move(properties)) {}
   
   ~FileReaderImpl() {
-     std::cout << "Patch version for fix OOM" << std::endl;
+     std::cout << "Patch version-0830" << std::endl;
   }
 
   Status Init() {
