@@ -106,9 +106,9 @@ class ColumnReaderImpl : public ColumnReader {
                             std::shared_ptr<::arrow::ChunkedArray>* out) final {
     RETURN_NOT_OK(LoadBatch(batch_size));
     RETURN_NOT_OK(BuildArray(batch_size, out));
-    // for (int x = 0; x < (*out)->num_chunks(); x++) {
-    //   RETURN_NOT_OK((*out)->chunk(x)->Validate());
-    // }
+    for (int x = 0; x < (*out)->num_chunks(); x++) {
+      RETURN_NOT_OK((*out)->chunk(x)->Validate());
+    }
     return Status::OK();
   }
 
