@@ -225,6 +225,9 @@ class ARROW_EXPORT Buffer {
   /// \brief Return the buffer's size in bytes
   int64_t size() const { return size_; }
 
+  /// \brief Set the buffer's size in bytes
+  void SetSize(int64_t size) { size_ = size; }
+
   /// \brief Return the buffer's capacity (number of allocated bytes)
   int64_t capacity() const { return capacity_; }
 

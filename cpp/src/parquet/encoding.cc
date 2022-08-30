@@ -1443,7 +1443,7 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
     auto dst_value = values->mutable_data() + (*bianry_length);
     int capacity = values->capacity();
     if (ARROW_PREDICT_FALSE((len_ + *bianry_length)  >= capacity)) {
-      values->Resize(len_ + *bianry_length, false);
+      values->Reserve(len_ + *bianry_length);
       dst_value = values->mutable_data() + (*bianry_length);
     }
 
@@ -2098,7 +2098,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
             uint64_t capacity = values->capacity();
             if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
               capacity = capacity + std::max((capacity >> 1), (uint64_t)value_len);
-              values->Resize(capacity, false);
+              values->Reserve(capacity);
               dst_value = values->mutable_data() + (*bianry_length);
             }
             (*bianry_length) += value_len;
@@ -2197,7 +2197,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
         uint64_t capacity = values->capacity();
         if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
           capacity = capacity + std::max((capacity >> 1), (uint64_t)value_len);
-          values->Resize(capacity, false);
+          values->Reserve(capacity);
           dst_value = values->mutable_data() + (*bianry_length);
         }
         (*bianry_length) += value_len;
