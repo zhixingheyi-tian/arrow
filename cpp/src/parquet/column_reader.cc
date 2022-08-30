@@ -1639,7 +1639,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
       const auto first_offset = offsetArr[0];
       const auto last_offset = offsetArr[values_written_];
       int64_t binary_length = last_offset - first_offset;
-      std::cout << "binary_length:" << binary_length << std::endl;
+      // std::cout << "binary_length:" << binary_length << std::endl;
       values_->SetSize(binary_length);
     
       offset_ = AllocateBuffer(this->pool_);
