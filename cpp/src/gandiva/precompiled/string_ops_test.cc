@@ -1243,49 +1243,64 @@ TEST(TestStringOps, TestSplitPart) {
   uint64_t ctx_ptr = reinterpret_cast<gdv_int64>(&ctx);
   gdv_int32 out_len = 0;
   const char* out_str;
+  bool out_valid;
 
-  out_str = split_part(ctx_ptr, "A,B,C", 5, ",", 1, -1, &out_len);
+  out_str = split_part(ctx_ptr, "A,B,C", 5, true, ",", 1, true, -1, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "");
   EXPECT_THAT(
       ctx.get_error(),
       ::testing::HasSubstr("Index in split_part must be positive, value provided was -1"));
 
-  out_str = split_part(ctx_ptr, "A,B,C", 5, ",", 1, 0, &out_len);
+  out_str = split_part(ctx_ptr, "A,B,C", 5, true, ",", 1, true, 0, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "A");
 
-  out_str = split_part(ctx_ptr, "A,B,C", 5, ",", 1, 1, &out_len);
+  out_str = split_part(ctx_ptr, "A,B,C", 5, true, ",", 1, true, 1, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "B");
 
-  out_str = split_part(ctx_ptr, "A,B,C", 5, ",", 1, 2, &out_len);
+  out_str = split_part(ctx_ptr, "A,B,C", 5, true, ",", 1, true, 2,  true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "C");
 
-  out_str = split_part(ctx_ptr, "abc~@~def~@~ghi", 15, "~@~", 3, 0, &out_len);
+  out_str = split_part(ctx_ptr, "abc~@~def~@~ghi", 15, true, "~@~", 3, true, 0, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "abc");
 
-  out_str = split_part(ctx_ptr, "abc~@~def~@~ghi", 15, "~@~", 3, 1, &out_len);
+  out_str = split_part(ctx_ptr, "abc~@~def~@~ghi", 15, true, "~@~", 3, true, 1, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "def");
 
-  out_str = split_part(ctx_ptr, "abc~@~def~@~ghi", 15, "~@~", 3, 2, &out_len);
+  out_str = split_part(ctx_ptr, "abc~@~def~@~ghi", 15, true, "~@~", 3, true, 2, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "ghi");
 
   // Result must be empty when the index is > no of elements
-  out_str = split_part(ctx_ptr, "123|456|789", 11, "|", 1, 3, &out_len);
+  out_str = split_part(ctx_ptr, "123|456|789", 11, true, "|", 1, true, 3, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, false);
   EXPECT_EQ(std::string(out_str, out_len), "");
 
-  out_str = split_part(ctx_ptr, "123|", 4, "|", 1, 0, &out_len);
+  out_str = split_part(ctx_ptr, "123|", 4, true, "|", 1, true, 0, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "123");
 
-  out_str = split_part(ctx_ptr, "|123", 4, "|", 1, 0, &out_len);
+  out_str = split_part(ctx_ptr, "123|", 4, true, "|", 1, true, 1, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, true);
   EXPECT_EQ(std::string(out_str, out_len), "");
 
-  out_str = split_part(ctx_ptr, "ç†ååçåå†", 18, "å", 2, 0, &out_len);
+  out_str = split_part(ctx_ptr, "|123", 4, true, "|", 1, true, 0, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = split_part(ctx_ptr, "ç†ååçåå†", 18, true, "å", 2, true, 0, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "ç†");
 
-  out_str = split_part(ctx_ptr, "ç†ååçåå†", 18, "†åå", 6, 0, &out_len);
+  out_str = split_part(ctx_ptr, "ç†ååçåå†", 18, true, "†åå", 6, true, 0, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "ç");
 
-  out_str = split_part(ctx_ptr, "ç†ååçåå†", 18, "†", 3, 1, &out_len);
+  out_str = split_part(ctx_ptr, "ç†ååçåå†", 18, true, "†", 3, true, 1, true, &out_valid, &out_len);
   EXPECT_EQ(std::string(out_str, out_len), "ååçåå");
+
+  out_str = split_part(ctx_ptr, "A?B?C", 5, true, "\\?", 2, true, 1, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "B");
+
+  // No matching.
+  out_str = split_part(ctx_ptr, "A?B?C", 5, true, "x", 1, true, 1, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, false);
 }
 
 TEST(TestStringOps, TestURLDecoder) {
