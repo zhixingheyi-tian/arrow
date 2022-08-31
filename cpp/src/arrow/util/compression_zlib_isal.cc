@@ -375,6 +375,7 @@ class GZipCodec : public Codec {
       ret = isal_inflate(&state_);
       if (ret == ISAL_BLOCK_FINISH || ret == ISAL_DECOMP_OK) break;
 
+      printf("AAA");
       // Failure, buffer was too small
       return Status::IOError("Too small a buffer passed to GZipCodec. InputLength=",
                              input_length, " OutputLength=", output_buffer_length);

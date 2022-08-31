@@ -291,7 +291,7 @@ Status Projector::AllocArrayData(const DataTypePtr& type, int64_t num_records,
     data_len = arrow::BitUtil::BytesForBits(num_records * fw_type.bit_width());
   } else if (arrow::is_binary_like(type_id)) {
     // we don't know the expected size for varlen output vectors.
-    data_len = 3970 * 8;
+    data_len = 0;
   } else {
     return Status::Invalid("Unsupported output data type " + type->ToString());
   }
