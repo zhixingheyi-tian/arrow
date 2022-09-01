@@ -329,15 +329,15 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 #define SHA2_HASH_FUNCTION_BUF(TYPE)                                                      \
   GANDIVA_EXPORT                                                                          \
   const char* gdv_fn_sha2_##TYPE##_int32(int64_t context, gdv_##TYPE value,               \
-                                 int32_t value_length, bool value_validity,               \
-                                 int32_t bits_length, bool bits_len_validity,             \
+                                 int32_t value_length,                                    \
+                                 int32_t bits_length,                                     \
                                  int32_t* out_length) {                                   \
     return gandiva::gdv_sha2_hash(context, value, value_length, bits_length, out_length); \
   }
 
 #define SHA256_HASH_FUNCTION(TYPE)                                                    \
   GANDIVA_EXPORT                                                                      \
-  const char* gdv_fn_sha256_##TYPE(int64_t context, gdv_##TYPE value, bool validity,  \
+  const char* gdv_fn_sha256_##TYPE(int64_t context, gdv_##TYPE value,                 \
                                    int32_t* out_length) {                             \
     auto value_as_long = gandiva::gdv_double_to_long((double)value);                  \
     const char* result = gandiva::gdv_sha256_hash(context, &value_as_long,            \
@@ -348,7 +348,7 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 #define SHA256_HASH_FUNCTION_BUF(TYPE)                                         \
   GANDIVA_EXPORT                                                               \
   const char* gdv_fn_sha256_##TYPE(int64_t context, gdv_##TYPE value,          \
-                                   int32_t value_length, bool value_validity,  \
+                                   int32_t value_length,                       \
                                    int32_t* out_length) {                      \
     return gandiva::gdv_sha256_hash(context, value, value_length, out_length); \
   }
@@ -980,7 +980,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
+      types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_int8", types->i8_ptr_type() /*return_type*/,
                                   args, reinterpret_cast<void*>(gdv_fn_md5_int8));

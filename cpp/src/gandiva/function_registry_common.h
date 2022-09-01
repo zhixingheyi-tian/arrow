@@ -224,8 +224,8 @@ typedef std::unordered_map<const FunctionSignature*, const NativeFunction*, KeyH
 //
 // The function name includes the base name & input type name. gdv_fn_sha1_float64
 #define HASH_SHA1_NULL_IF_NULL(NAME, ALIASES, TYPE)                                 \
-  NativeFunction(#NAME, std::vector<std::string> ALIASES, DataTypeVector{TYPE()}, \
-                 utf8(), kResultNullIfNull, ARROW_STRINGIFY(gdv_fn_sha1_##TYPE),   \
+  NativeFunction(#NAME, std::vector<std::string> ALIASES, DataTypeVector{TYPE()},   \
+                 utf8(), kResultNullIfNull, ARROW_STRINGIFY(gdv_fn_sha1_##TYPE),    \
                  NativeFunction::kNeedsContext | NativeFunction::kCanReturnErrors)
 
 // HashSHA2 functions that :
