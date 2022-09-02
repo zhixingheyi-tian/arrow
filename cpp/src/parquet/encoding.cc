@@ -2068,6 +2068,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     auto dict_values = reinterpret_cast<const ByteArray*>(dictionary_->data());
     int values_decoded = 0;
     int num_appended = 0;
+    uint64_t capacity = values->capacity();
     while (num_appended < num_values) {
       bool is_valid = bit_reader.IsSet();
       bit_reader.Next();
@@ -2095,7 +2096,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
             
             auto value_len = val.len;
             auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
-            uint64_t capacity = values->capacity();
+            
             if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
               capacity = capacity + std::max((capacity >> 1), (uint64_t)value_len);
               values->Reserve(capacity);
