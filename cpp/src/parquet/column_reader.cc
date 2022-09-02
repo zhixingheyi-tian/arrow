@@ -1602,7 +1602,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
         UpdateCapacity(values_capacity_, values_written_, extra_values);
     if (new_values_capacity > values_capacity_) {
       PARQUET_THROW_NOT_OK(
-          values_->Resize(new_values_capacity * 20, false));
+          values_->Resize(new_values_capacity * binary_per_row_length_, false));
       PARQUET_THROW_NOT_OK(
           offset_->Resize((new_values_capacity+1) * 4, false));
 
@@ -1641,6 +1641,12 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
       int64_t binary_length = last_offset - first_offset;
       // std::cout << "binary_length:" << binary_length << std::endl;
       values_->SetSize(binary_length);
+
+      if (ARROW_PREDICT_FALSE(!hasCal_average_len_)) {
+        binary_per_row_length_ = binary_length / values_written_ + 1;
+        std::cout << "binary_per_row_length_:" << binary_per_row_length_ << std::endl;
+        hasCal_average_len_ = true;
+      }
     
       offset_ = AllocateBuffer(this->pool_);
       bianry_length_ = 0;

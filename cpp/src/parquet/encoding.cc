@@ -2172,6 +2172,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     constexpr int32_t kBufferSize = 2048;
     int32_t indices[kBufferSize];
     int values_decoded = 0;
+    uint64_t capacity = values->capacity();
 
     // ArrowBinaryHelper helper(out);
     auto dict_values = reinterpret_cast<const ByteArray*>(dictionary_->data());
@@ -2185,7 +2186,7 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
       if (num_indices == 0) ParquetException::EofException();
       for (int i = 0; i < num_indices; ++i) {
         auto idx = indices[i];
-        RETURN_NOT_OK(IndexInBounds(idx));
+        // RETURN_NOT_OK(IndexInBounds(idx));
         const auto& val = dict_values[idx];
         // if (ARROW_PREDICT_FALSE(!helper.CanFit(val.len))) {
         //   RETURN_NOT_OK(helper.PushChunk());
@@ -2194,7 +2195,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
 
         auto value_len = val.len;
         auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
-        uint64_t capacity = values->capacity();
         if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
           capacity = capacity + std::max((capacity >> 1), (uint64_t)value_len);
           values->Reserve(capacity);
