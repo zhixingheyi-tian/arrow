@@ -1659,10 +1659,18 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len, 
     return "";
   }
 
-  if (delim_len == 0 || text_len == 0) {
-    // output will just be text if no delimiter is provided
-    *out_len = text_len;
+  // output will just be "" if input is empty.
+  if (text_len == 0) {
+    *out_len = 0;
+    *out_valid = true;
     return text;
+  }
+
+  // If delimiter is empty, just return the char at index in text.
+  if (delim_len == 0) {
+    *out_len = 1;
+    *out_valid = true;
+    return text + index;
   }
 
   // TODO: matching regular expression for split function. Currently, we replace getArrayItem(split)

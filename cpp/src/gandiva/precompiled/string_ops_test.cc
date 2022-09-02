@@ -1301,6 +1301,14 @@ TEST(TestStringOps, TestSplitPart) {
   // No matching.
   out_str = split_part(ctx_ptr, "A?B?C", 5, true, "x", 1, true, 1, true, &out_valid, &out_len);
   EXPECT_EQ(out_valid, false);
+
+  out_str = split_part(ctx_ptr, "", 0, true, "x", 1, true, 0, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "");
+
+  out_str = split_part(ctx_ptr, "123", 3, true, "", 0, true, 1, true, &out_valid, &out_len);
+  EXPECT_EQ(out_valid, true);
+  EXPECT_EQ(std::string(out_str, out_len), "2");
 }
 
 TEST(TestStringOps, TestURLDecoder) {
