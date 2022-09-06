@@ -278,11 +278,8 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 
 #define MD5_HASH_FUNCTION(TYPE)                                                    \
   GANDIVA_EXPORT                                                                   \
-  const char* gdv_fn_md5_##TYPE(int64_t context, gdv_##TYPE value, bool validity,  \
+  const char* gdv_fn_md5_##TYPE(int64_t context, gdv_##TYPE value,                 \
                                 int32_t* out_length) {                             \
-    if (!validity) {                                                               \
-      return gandiva::gdv_md5_hash(context, NULLPTR, 0, out_length);               \
-    }                                                                              \
     auto value_as_long = gandiva::gdv_double_to_long((double)value);               \
     const char* result = gandiva::gdv_md5_hash(context, &value_as_long,            \
                                                sizeof(value_as_long), out_length); \
@@ -293,20 +290,14 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 #define MD5_HASH_FUNCTION_BUF(TYPE)                                                      \
   GANDIVA_EXPORT                                                                         \
   const char* gdv_fn_md5_##TYPE(int64_t context, gdv_##TYPE value, int32_t value_length, \
-                                bool value_validity, int32_t* out_length) {              \
-    if (!value_validity) {                                                               \
-      return gandiva::gdv_md5_hash(context, NULLPTR, 0, out_length);                     \
-    }                                                                                    \
+                                int32_t* out_length) {                                   \
     return gandiva::gdv_md5_hash(context, value, value_length, out_length);              \
   }
 
 #define SHA1_HASH_FUNCTION(TYPE)                                                    \
   GANDIVA_EXPORT                                                                    \
-  const char* gdv_fn_sha1_##TYPE(int64_t context, gdv_##TYPE value, bool validity,  \
+  const char* gdv_fn_sha1_##TYPE(int64_t context, gdv_##TYPE value,                 \
                                  int32_t* out_length) {                             \
-    if (!validity) {                                                                \
-      return gandiva::gdv_sha1_hash(context, NULLPTR, 0, out_length);               \
-    }                                                                               \
     auto value_as_long = gandiva::gdv_double_to_long((double)value);                \
     const char* result = gandiva::gdv_sha1_hash(context, &value_as_long,            \
                                                 sizeof(value_as_long), out_length); \
@@ -317,27 +308,16 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 #define SHA1_HASH_FUNCTION_BUF(TYPE)                                         \
   GANDIVA_EXPORT                                                             \
   const char* gdv_fn_sha1_##TYPE(int64_t context, gdv_##TYPE value,          \
-                                 int32_t value_length, bool value_validity,  \
+                                 int32_t value_length,                       \
                                  int32_t* out_length) {                      \
-    if (!value_validity) {                                                   \
-      return gandiva::gdv_sha1_hash(context, NULLPTR, 0, out_length);        \
-    }                                                                        \
     return gandiva::gdv_sha1_hash(context, value, value_length, out_length); \
   }
 
 #define SHA2_HASH_FUNCTION(TYPE)                                                           \
   GANDIVA_EXPORT                                                                           \
-  const char* gdv_fn_sha2_##TYPE##_int32(int64_t context, gdv_##TYPE value, bool validity, \
-                                 int32_t bits_length, bool bits_len_validity,              \
+  const char* gdv_fn_sha2_##TYPE##_int32(int64_t context, gdv_##TYPE value,                \
+                                 int32_t bits_length,                                      \
                                  int32_t* out_length) {                                    \
-    if (!bits_len_validity) {                                                              \
-      gdv_fn_context_set_error_msg(context, "The bits length should be specified!");       \
-      *out_length = 0;                                                                     \
-      return "";                                                                           \
-    }                                                                                      \
-    if (!validity) {                                                                       \
-      return gandiva::gdv_sha2_hash(context, NULLPTR, 0, bits_length, out_length);         \
-    }                                                                                      \
     auto value_as_long = gandiva::gdv_double_to_long((double)value);                       \
     const char* result = gandiva::gdv_sha2_hash(context, &value_as_long,                   \
                                                 sizeof(value_as_long),                     \
@@ -349,28 +329,16 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 #define SHA2_HASH_FUNCTION_BUF(TYPE)                                                      \
   GANDIVA_EXPORT                                                                          \
   const char* gdv_fn_sha2_##TYPE##_int32(int64_t context, gdv_##TYPE value,               \
-                                 int32_t value_length, bool value_validity,               \
-                                 int32_t bits_length, bool bits_len_validity,             \
+                                 int32_t value_length,                                    \
+                                 int32_t bits_length,                                     \
                                  int32_t* out_length) {                                   \
-    if (!bits_len_validity) {                                                             \
-      gdv_fn_context_set_error_msg(context, "The bits length should be specified!");      \
-      *out_length = 0;                                                                    \
-      return "";                                                                          \
-    }                                                                                     \
-    if (!value_validity) {                                                                \
-      return gandiva::gdv_sha2_hash(context, NULLPTR, 0, bits_length, out_length);        \
-    }                                                                                     \
-                                                                                          \
     return gandiva::gdv_sha2_hash(context, value, value_length, bits_length, out_length); \
   }
 
 #define SHA256_HASH_FUNCTION(TYPE)                                                    \
   GANDIVA_EXPORT                                                                      \
-  const char* gdv_fn_sha256_##TYPE(int64_t context, gdv_##TYPE value, bool validity,  \
+  const char* gdv_fn_sha256_##TYPE(int64_t context, gdv_##TYPE value,                 \
                                    int32_t* out_length) {                             \
-    if (!validity) {                                                                  \
-      return gandiva::gdv_sha256_hash(context, NULLPTR, 0, out_length);               \
-    }                                                                                 \
     auto value_as_long = gandiva::gdv_double_to_long((double)value);                  \
     const char* result = gandiva::gdv_sha256_hash(context, &value_as_long,            \
                                                   sizeof(value_as_long), out_length); \
@@ -380,12 +348,8 @@ int32_t gdv_fn_populate_varlen_vector(int64_t context_ptr, int8_t* data_ptr,
 #define SHA256_HASH_FUNCTION_BUF(TYPE)                                         \
   GANDIVA_EXPORT                                                               \
   const char* gdv_fn_sha256_##TYPE(int64_t context, gdv_##TYPE value,          \
-                                   int32_t value_length, bool value_validity,  \
+                                   int32_t value_length,                       \
                                    int32_t* out_length) {                      \
-    if (!value_validity) {                                                     \
-      return gandiva::gdv_sha256_hash(context, NULLPTR, 0, out_length);        \
-    }                                                                          \
-                                                                               \
     return gandiva::gdv_sha256_hash(context, value, value_length, out_length); \
   }
 
@@ -432,11 +396,7 @@ SHA_VAR_LEN_PARAMS(SHA1_HASH_FUNCTION_BUF)
 GANDIVA_EXPORT
 const char* gdv_fn_md5_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                   int32_t /*x_precision*/, int32_t /*x_scale*/,
-                                  gdv_boolean x_isvalid, int32_t* out_length) {
-  if (!x_isvalid) {
-    return gandiva::gdv_md5_hash(context, NULLPTR, 0, out_length);
-  }
-
+                                  int32_t* out_length) {
   const gandiva::BasicDecimal128 decimal_128(x_high, x_low);
   return gandiva::gdv_md5_hash(context, decimal_128.ToBytes().data(), 16, out_length);
 }
@@ -444,11 +404,7 @@ const char* gdv_fn_md5_decimal128(int64_t context, int64_t x_high, uint64_t x_lo
 GANDIVA_EXPORT
 const char* gdv_fn_sha256_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                      int32_t /*x_precision*/, int32_t /*x_scale*/,
-                                     gdv_boolean x_isvalid, int32_t* out_length) {
-  if (!x_isvalid) {
-    return gandiva::gdv_sha256_hash(context, NULLPTR, 0, out_length);
-  }
-
+                                     int32_t* out_length) {
   const gandiva::BasicDecimal128 decimal_128(x_high, x_low);
   return gandiva::gdv_sha256_hash(context, decimal_128.ToBytes().data(), 16, out_length);
 }
@@ -456,11 +412,7 @@ const char* gdv_fn_sha256_decimal128(int64_t context, int64_t x_high, uint64_t x
 GANDIVA_EXPORT
 const char* gdv_fn_sha1_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                    int32_t /*x_precision*/, int32_t /*x_scale*/,
-                                   gdv_boolean x_isvalid, int32_t* out_length) {
-  if (!x_isvalid) {
-    return gandiva::gdv_sha1_hash(context, NULLPTR, 0, out_length);
-  }
-
+                                   int32_t* out_length) {
   const gandiva::BasicDecimal128 decimal_128(x_high, x_low);
   return gandiva::gdv_sha1_hash(context, decimal_128.ToBytes().data(), 16, out_length);
 }
@@ -1028,7 +980,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_int8", types->i8_ptr_type() /*return_type*/,
@@ -1038,7 +989,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_int16",
@@ -1049,7 +999,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_int32",
@@ -1060,7 +1009,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_int64",
@@ -1071,7 +1019,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_uint8",
@@ -1082,7 +1029,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_uint16",
@@ -1093,7 +1039,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_uint32",
@@ -1104,7 +1049,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_uint64",
@@ -1115,7 +1059,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->float_type(),   // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_float32",
@@ -1126,7 +1069,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->double_type(),  // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_float64",
@@ -1137,7 +1079,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i1_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_boolean",
@@ -1148,7 +1089,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_date64",
@@ -1159,7 +1099,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_date32",
@@ -1170,7 +1109,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_time32",
@@ -1181,7 +1119,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_md5_timestamp",
@@ -1193,7 +1130,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out
   };
 
@@ -1205,7 +1141,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out
   };
 
@@ -1217,7 +1152,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_int8",
@@ -1228,7 +1162,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_int16",
@@ -1239,7 +1172,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_int32",
@@ -1250,7 +1182,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_int64",
@@ -1261,7 +1192,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_uint8",
@@ -1272,7 +1202,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_uint16",
@@ -1283,7 +1212,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_uint32",
@@ -1294,7 +1222,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_uint64",
@@ -1305,7 +1232,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->float_type(),   // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_float32",
@@ -1316,7 +1242,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->double_type(),  // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_float64",
@@ -1327,7 +1252,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i1_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_boolean",
@@ -1338,7 +1262,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_date64",
@@ -1349,7 +1272,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_date32",
@@ -1360,7 +1282,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_time32",
@@ -1371,7 +1292,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha1_timestamp",
@@ -1383,7 +1303,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out
   };
 
@@ -1396,7 +1315,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out
   };
 
@@ -1408,7 +1326,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_int8",
@@ -1419,7 +1336,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_int16",
@@ -1430,7 +1346,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_int32",
@@ -1441,7 +1356,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_int64",
@@ -1452,7 +1366,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_uint8",
@@ -1463,7 +1376,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_uint16",
@@ -1474,7 +1386,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_uint32",
@@ -1485,7 +1396,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_uint64",
@@ -1496,7 +1406,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->float_type(),   // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_float32",
@@ -1507,7 +1416,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->double_type(),  // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_float64",
@@ -1518,7 +1426,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i1_type(),      // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_boolean",
@@ -1529,7 +1436,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_date64",
@@ -1540,7 +1446,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_date32",
@@ -1551,7 +1456,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_time32",
@@ -1562,7 +1466,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha256_timestamp",
@@ -1574,7 +1477,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out
   };
 
@@ -1587,7 +1489,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out
   };
 
@@ -1602,7 +1503,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // low_bits
       types->i32_type(),     // precision
       types->i32_type(),     // scale
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out length
   };
 
@@ -1616,7 +1516,6 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // low_bits
       types->i32_type(),     // precision
       types->i32_type(),     // scale
-      types->i1_type(),      // validity
       types->i32_ptr_type()  // out length
   };
 
@@ -1628,9 +1527,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_int8_int32",
@@ -1641,9 +1538,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_int16_int32",
@@ -1654,9 +1549,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_int32_int32",
@@ -1667,9 +1560,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_int64_int32",
@@ -1680,9 +1571,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i8_type(),      // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_uint8_int32",
@@ -1693,9 +1582,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i16_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_uint16_int32",
@@ -1706,9 +1593,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_uint32_int32",
@@ -1719,9 +1604,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_uint64_int32",
@@ -1732,9 +1615,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->float_type(),   // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_float32_int32",
@@ -1745,9 +1626,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->double_type(),  // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_float64_int32",
@@ -1758,9 +1637,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i1_type(),      // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_boolean_int32",
@@ -1771,9 +1648,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_date64_int32",
@@ -1784,9 +1659,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_date32_int32",
@@ -1797,9 +1670,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i32_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_time32_int32",
@@ -1810,9 +1681,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
   args = {
       types->i64_type(),     // context
       types->i64_type(),     // value
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out_length
   };
   engine->AddGlobalMappingForFunc("gdv_fn_sha2_timestamp_int32",
@@ -1824,9 +1693,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out
   };
 
@@ -1839,9 +1706,7 @@ void ExportedStubFunctions::AddMappings(Engine* engine) const {
       types->i64_type(),     // context
       types->i8_ptr_type(),  // const char*
       types->i32_type(),     // value_length
-      types->i1_type(),      // validity
       types->i32_type(),     // bits length
-      types->i1_type(),      // bits length validity
       types->i32_ptr_type()  // out
   };
 

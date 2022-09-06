@@ -1643,10 +1643,14 @@ const char* rpad_utf8_int32(gdv_int64 context, const char* text, gdv_int32 text_
 }
 
 FORCE_INLINE
-const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
-                       const char* delimiter, gdv_int32 delim_len, gdv_int32 index,
-                       gdv_int32* out_len) {
+const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len, bool in1_valid,
+                       const char* delimiter, gdv_int32 delim_len, bool in2_valid, gdv_int32 index,
+                       bool in3_valid, bool* out_valid, gdv_int32* out_len) {
   *out_len = 0;
+  if (!in1_valid || !in2_valid || !in3_valid) {
+    *out_valid = false;
+    return "";
+  }
   if (index < 0) {
     char error_message[100];
     snprintf(error_message, sizeof(error_message),
@@ -1655,24 +1659,49 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
     return "";
   }
 
-  if (delim_len == 0 || text_len == 0) {
-    // output will just be text if no delimiter is provided
-    *out_len = text_len;
+  // output will just be "" if input is empty.
+  if (text_len == 0) {
+    *out_len = 0;
+    *out_valid = true;
     return text;
   }
+
+  // If delimiter is empty, just return the char at index in text.
+  if (delim_len == 0) {
+    *out_len = 1;
+    *out_valid = true;
+    return text + index;
+  }
+
+  // TODO: matching regular expression for split function. Currently, we replace getArrayItem(split)
+  // with this split_part function. The split function also supports regexp based delimiter other than
+  // literal delimiter.
+  int j = 0;
+  char real_delimiter[delim_len];
+  for (int i = 0; i < delim_len; i++) {
+    if (delimiter[i] == '\\') {
+      continue;
+    } else {
+      real_delimiter[j] = delimiter[i];
+      j++;
+    }
+  }
+  int real_delimiter_len = j;
 
   int i = 0, match_no = 0;
 
   while (i < text_len) {
     // find the position where delimiter matched for the first time
-    int match_pos = match_string(text, text_len, i, delimiter, delim_len);
+    int match_pos = match_string(text, text_len, i, real_delimiter, real_delimiter_len);
     if (match_pos == -1 && match_no != index) {
       // reached the end without finding a match.
+      *out_len = 0;
+      *out_valid = false;
       return "";
     } else {
       // Found a match. If the match number is index then return this match
       if (match_no == index) {
-        int end_pos = match_pos - delim_len;
+        int end_pos = match_pos - real_delimiter_len;
 
         if (match_pos == -1) {
           // end position should be last position of the string as we have the last
@@ -1693,6 +1722,7 @@ const char* split_part(gdv_int64 context, const char* text, gdv_int32 text_len,
           return "";
         }
         memcpy(out_str, text + i, *out_len);
+        *out_valid = true;
         return out_str;
       } else {
         i = match_pos;

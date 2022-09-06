@@ -114,17 +114,17 @@ double gdv_fn_random_with_seed64_offset(int64_t ptr, int64_t seed, bool seed_val
 GANDIVA_EXPORT
 const char* gdv_fn_sha256_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                      int32_t x_precision, int32_t x_scale,
-                                     gdv_boolean x_isvalid, int32_t* out_length);
+                                     int32_t* out_length);
 
 GANDIVA_EXPORT
 const char* gdv_fn_md5_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                   int32_t x_precision, int32_t x_scale,
-                                  gdv_boolean x_isvalid, int32_t* out_length);
+                                  int32_t* out_length);
 
 GANDIVA_EXPORT
 const char* gdv_fn_sha1_decimal128(int64_t context, int64_t x_high, uint64_t x_low,
                                    int32_t x_precision, int32_t x_scale,
-                                   gdv_boolean x_isvalid, int32_t* out_length);
+                                   int32_t* out_length);
 
 int32_t gdv_fn_dec_from_string(int64_t context, const char* in, int32_t in_length,
                                int32_t* precision_from_str, int32_t* scale_from_str,
