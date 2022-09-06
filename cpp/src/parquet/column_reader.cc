@@ -1570,31 +1570,19 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
   }
 
   void ReadValuesDense(int64_t values_to_read) override {
-    // int64_t num_decoded = this->current_decoder_->DecodeArrowNonNull(
-    //     static_cast<int>(values_to_read), &accumulator_);
     int64_t num_decoded = this->current_decoder_->DecodeArrow_opt(
         static_cast<int>(values_to_read), 0,
         NULLPTR, (reinterpret_cast<int32_t *>(offset_->mutable_data()) + values_written_), 
-        values_, 0, &accumulator_, &bianry_length_);
+        values_, 0, &bianry_length_);
     DCHECK_EQ(num_decoded, values_to_read);
-    // ResetValues();
   }
-
-  // void ReadValuesSpaced(int64_t values_to_read, int64_t null_count) override {
-  //   int64_t num_decoded = this->current_decoder_->DecodeArrow(
-  //       static_cast<int>(values_to_read), static_cast<int>(null_count),
-  //       valid_bits_->mutable_data(), values_written_, &accumulator_);
-  //   DCHECK_EQ(num_decoded, values_to_read - null_count);
-  //   ResetValues();
-  // }
 
   void ReadValuesSpaced(int64_t values_to_read, int64_t null_count) override {
     int64_t num_decoded = this->current_decoder_->DecodeArrow_opt(
         static_cast<int>(values_to_read), static_cast<int>(null_count),
         valid_bits_->mutable_data(), (reinterpret_cast<int32_t *>(offset_->mutable_data()) + values_written_), 
-        values_, values_written_, &accumulator_, &bianry_length_);
+        values_, values_written_, &bianry_length_);
     DCHECK_EQ(num_decoded, values_to_read - null_count);
-    // ResetValues();
   }
 
   void ReserveValues(int64_t extra_values) {
@@ -1626,7 +1614,6 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
 
  std::shared_ptr<ResizableBuffer> ReleaseValues() override {
       auto result = values_;
-      // PARQUET_THROW_NOT_OK(result->Resize(bytes_for_values(values_written_), true));
       values_ = AllocateBuffer(this->pool_);
       values_capacity_ = 0;
       return result;
@@ -1672,9 +1659,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
 
   int32_t bianry_length_ = 0;
 
-  // std::shared_ptr<::arrow::ResizableBuffer> values_;
   std::shared_ptr<::arrow::ResizableBuffer> offset_;
-  // std::shared_ptr<::arrow::ResizableBuffer> valid_bits_;
 };
 
 class ByteArrayDictionaryRecordReader : public TypedRecordReader<ByteArrayType>,

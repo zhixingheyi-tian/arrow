@@ -1356,15 +1356,11 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
                   int32_t* offset,
                   std::shared_ptr<::arrow::ResizableBuffer> & values,
                   int64_t valid_bits_offset,
-                  typename EncodingTraits<ByteArrayType>::Accumulator* out,
                   int32_t* bianry_length) {
     int result = 0;
     PARQUET_THROW_NOT_OK(DecodeArrowDense_opt(num_values, null_count, valid_bits,
                                           offset, values,
-                                          valid_bits_offset, out, &result, bianry_length));
-
-    // PARQUET_THROW_NOT_OK(DecodeArrowDense(num_values, null_count, valid_bits,
-    //                                       valid_bits_offset, out, &result));
+                                          valid_bits_offset, &result, bianry_length));
 
     return result;
   }
@@ -1428,26 +1424,15 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
                           int32_t* offset,
                           std::shared_ptr<::arrow::ResizableBuffer> & values,
                           int64_t valid_bits_offset,
-                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
                           int* out_values_decoded,
                           int32_t* bianry_length) {
-    // ArrowBinaryHelper helper(out);
     int values_decoded = 0;
-
-
-
-    // RETURN_NOT_OK(helper.builder->Reserve(num_values));
-    // RETURN_NOT_OK(helper.builder->ReserveData(
-    //     std::min<int64_t>(len_, helper.chunk_space_remaining)));
-
     auto dst_value = values->mutable_data() + (*bianry_length);
     int capacity = values->capacity();
     if (ARROW_PREDICT_FALSE((len_ + *bianry_length)  >= capacity)) {
       values->Reserve(len_ + *bianry_length);
       dst_value = values->mutable_data() + (*bianry_length);
     }
-
-    
 
     int i = 0;
     RETURN_NOT_OK(VisitNullBitmapInline(
@@ -1944,22 +1929,17 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
                   int32_t* offset,
                   std::shared_ptr<::arrow::ResizableBuffer> & values,
                   int64_t valid_bits_offset,
-                  typename EncodingTraits<ByteArrayType>::Accumulator* out,
                   int32_t* bianry_length) {
     int result = 0;
     if (null_count == 0) {
       PARQUET_THROW_NOT_OK(DecodeArrowDenseNonNull_opt(num_values,
-                                          offset, values,
-                                          out, &result, bianry_length));
+                                          offset, values, &result, bianry_length));
     } else {
       PARQUET_THROW_NOT_OK(DecodeArrowDense_opt(num_values, null_count, valid_bits,
                                           offset, values,
-                                          valid_bits_offset, out, &result, bianry_length));
+                                          valid_bits_offset, &result, bianry_length));
       
     }
-
-    // PARQUET_THROW_NOT_OK(DecodeArrowDense(num_values, null_count, valid_bits,
-    //                                       valid_bits_offset, out, &result));
 
     return result;
   }
@@ -2033,15 +2013,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
                           int32_t* offset,
                           std::shared_ptr<::arrow::ResizableBuffer> & values,
                           int64_t valid_bits_offset,
-                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
                           int* out_num_values,
                           int32_t* bianry_length) {
     constexpr int32_t kBufferSize = 1024;
     int32_t indices[kBufferSize];
-
     auto dst_value = values->mutable_data() + (*bianry_length);
-
-
 
     ::arrow::internal::BitmapReader bit_reader(valid_bits, valid_bits_offset, num_values);
 
@@ -2139,7 +2115,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
   Status DecodeArrowDenseNonNull_opt(int num_values,
                           int32_t* offset,
                           std::shared_ptr<::arrow::ResizableBuffer> & values,
-                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
                           int* out_num_values,
                           int32_t* bianry_length) {
 
