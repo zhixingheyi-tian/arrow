@@ -1464,37 +1464,19 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
           if (ARROW_PREDICT_FALSE(len_ < increment)) {
             ParquetException::EofException();
           }
-          // if (ARROW_PREDICT_FALSE(!helper.CanFit(value_len))) {
-          //   // This element would exceed the capacity of a chunk
-          //   RETURN_NOT_OK(helper.PushChunk());
-          //   RETURN_NOT_OK(helper.builder->Reserve(num_values - i));
-          //   RETURN_NOT_OK(helper.builder->ReserveData(
-          //       std::min<int64_t>(len_, helper.chunk_space_remaining)));
-          // }
-          // helper.UnsafeAppend(data_ + 4, value_len);
 
           (*bianry_length) += value_len;
           offset[i+1] = offset[i] + value_len;
           memcpy(dst_value, data_ + 4, value_len);
           dst_value = dst_value + value_len;
 
-          // std::cout << "*(data_ + 4) :" << *(data_ + 4) << std::endl;
-          // std::cout << "*(data_ + 5) " << *(data_ + 5) << std::endl;
-
           data_ += increment;
           len_ -= increment;
-
-          // uint8_t* address = values->mutable_data();
-          // for(int i=0; i< 10; i++) {
-          //   std::cout << "*(address+" << i << ")" << *(address+i) << std::endl;
-          // }
-          
           ++values_decoded;
           ++i;
           return Status::OK();
         },
         [&]() {
-          // helper.UnsafeAppendNull();
           offset[i+1] = offset[i];
           ++i;
           return Status::OK();
@@ -2057,8 +2039,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     constexpr int32_t kBufferSize = 1024;
     int32_t indices[kBufferSize];
 
-    // ArrowBinaryHelper helper(out);
-
     auto dst_value = values->mutable_data() + (*bianry_length);
 
 
@@ -2087,13 +2067,8 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
           // Consume all indices
           if (is_valid) {
             auto idx = indices[i];
-            RETURN_NOT_OK(IndexInBounds(idx));
-            const auto& val = dict_values[idx];
-            // if (ARROW_PREDICT_FALSE(!helper.CanFit(val.len))) {
-            //   RETURN_NOT_OK(helper.PushChunk());
-            // }
-            // RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
-            
+            // RETURN_NOT_OK(IndexInBounds(idx));
+            const auto& val = dict_values[idx];            
             auto value_len = val.len;
             auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
             
@@ -2110,7 +2085,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
             ++i;
             ++values_decoded;
           } else {
-            // RETURN_NOT_OK(helper.AppendNull());
             offset[num_appended+1] = offset[num_appended];
             --null_count;
           }
@@ -2124,7 +2098,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
           bit_reader.Next();
         }
       } else {
-        // RETURN_NOT_OK(helper.AppendNull());
         offset[num_appended+1] = offset[num_appended];
         --null_count;
         ++num_appended;
@@ -2189,11 +2162,6 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
         auto idx = indices[i];
         // RETURN_NOT_OK(IndexInBounds(idx));
         const auto& val = dict_values[idx];
-        // if (ARROW_PREDICT_FALSE(!helper.CanFit(val.len))) {
-        //   RETURN_NOT_OK(helper.PushChunk());
-        // }
-        // RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
-
         auto value_len = val.len;
         auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
         if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
