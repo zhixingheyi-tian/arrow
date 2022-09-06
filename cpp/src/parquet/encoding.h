@@ -316,6 +316,15 @@ class TypedDecoder : virtual public Decoder {
   virtual int DecodeArrow(int num_values, int null_count, const uint8_t* valid_bits,
                           int64_t valid_bits_offset,
                           typename EncodingTraits<DType>::Accumulator* out) = 0;
+  
+  virtual int DecodeArrow_opt(int num_values, int null_count, const uint8_t* valid_bits,
+                          int32_t* offset,
+                          std::shared_ptr<::arrow::ResizableBuffer> & values,
+                          int64_t valid_bits_offset,
+                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
+                          int32_t* bianry_length) {
+                            return 0;
+                          }
 
   /// \brief Decode into an ArrayBuilder or other accumulator ignoring nulls
   ///

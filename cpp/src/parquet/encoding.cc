@@ -25,6 +25,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "arrow/array.h"
 #include "arrow/array/builder_dict.h"
@@ -1351,7 +1352,27 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
     return result;
   }
 
+  int DecodeArrow_opt(int num_values, int null_count, const uint8_t* valid_bits,
+                  int32_t* offset,
+                  std::shared_ptr<::arrow::ResizableBuffer> & values,
+                  int64_t valid_bits_offset,
+                  typename EncodingTraits<ByteArrayType>::Accumulator* out,
+                  int32_t* bianry_length) {
+    int result = 0;
+    PARQUET_THROW_NOT_OK(DecodeArrowDense_opt(num_values, null_count, valid_bits,
+                                          offset, values,
+                                          valid_bits_offset, out, &result, bianry_length));
+
+    // PARQUET_THROW_NOT_OK(DecodeArrowDense(num_values, null_count, valid_bits,
+    //                                       valid_bits_offset, out, &result));
+
+    return result;
+  }
+
  private:
+
+  // const int32_t* offset_arr;
+
   Status DecodeArrowDense(int num_values, int null_count, const uint8_t* valid_bits,
                           int64_t valid_bits_offset,
                           typename EncodingTraits<ByteArrayType>::Accumulator* out,
@@ -1394,6 +1415,87 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
         },
         [&]() {
           helper.UnsafeAppendNull();
+          ++i;
+          return Status::OK();
+        }));
+
+    num_values_ -= values_decoded;
+    *out_values_decoded = values_decoded;
+    return Status::OK();
+  }
+
+  Status DecodeArrowDense_opt(int num_values, int null_count, const uint8_t* valid_bits,
+                          int32_t* offset,
+                          std::shared_ptr<::arrow::ResizableBuffer> & values,
+                          int64_t valid_bits_offset,
+                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
+                          int* out_values_decoded,
+                          int32_t* bianry_length) {
+    // ArrowBinaryHelper helper(out);
+    int values_decoded = 0;
+
+
+
+    // RETURN_NOT_OK(helper.builder->Reserve(num_values));
+    // RETURN_NOT_OK(helper.builder->ReserveData(
+    //     std::min<int64_t>(len_, helper.chunk_space_remaining)));
+
+    auto dst_value = values->mutable_data() + (*bianry_length);
+    int capacity = values->capacity();
+    if (ARROW_PREDICT_FALSE((len_ + *bianry_length)  >= capacity)) {
+      values->Reserve(len_ + *bianry_length);
+      dst_value = values->mutable_data() + (*bianry_length);
+    }
+
+    
+
+    int i = 0;
+    RETURN_NOT_OK(VisitNullBitmapInline(
+        valid_bits, valid_bits_offset, num_values, null_count,
+        [&]() {
+          if (ARROW_PREDICT_FALSE(len_ < 4)) {
+            ParquetException::EofException();
+          }
+          auto value_len = ::arrow::util::SafeLoadAs<int32_t>(data_);
+          if (ARROW_PREDICT_FALSE(value_len < 0 || value_len > INT32_MAX - 4)) {
+            return Status::Invalid("Invalid or corrupted value_len '", value_len, "'");
+          }
+          auto increment = value_len + 4;
+          if (ARROW_PREDICT_FALSE(len_ < increment)) {
+            ParquetException::EofException();
+          }
+          // if (ARROW_PREDICT_FALSE(!helper.CanFit(value_len))) {
+          //   // This element would exceed the capacity of a chunk
+          //   RETURN_NOT_OK(helper.PushChunk());
+          //   RETURN_NOT_OK(helper.builder->Reserve(num_values - i));
+          //   RETURN_NOT_OK(helper.builder->ReserveData(
+          //       std::min<int64_t>(len_, helper.chunk_space_remaining)));
+          // }
+          // helper.UnsafeAppend(data_ + 4, value_len);
+
+          (*bianry_length) += value_len;
+          offset[i+1] = offset[i] + value_len;
+          memcpy(dst_value, data_ + 4, value_len);
+          dst_value = dst_value + value_len;
+
+          // std::cout << "*(data_ + 4) :" << *(data_ + 4) << std::endl;
+          // std::cout << "*(data_ + 5) " << *(data_ + 5) << std::endl;
+
+          data_ += increment;
+          len_ -= increment;
+
+          // uint8_t* address = values->mutable_data();
+          // for(int i=0; i< 10; i++) {
+          //   std::cout << "*(address+" << i << ")" << *(address+i) << std::endl;
+          // }
+          
+          ++values_decoded;
+          ++i;
+          return Status::OK();
+        },
+        [&]() {
+          // helper.UnsafeAppendNull();
+          offset[i+1] = offset[i];
           ++i;
           return Status::OK();
         }));
@@ -1856,6 +1958,31 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     return result;
   }
 
+  int DecodeArrow_opt(int num_values, int null_count, const uint8_t* valid_bits,
+                  int32_t* offset,
+                  std::shared_ptr<::arrow::ResizableBuffer> & values,
+                  int64_t valid_bits_offset,
+                  typename EncodingTraits<ByteArrayType>::Accumulator* out,
+                  int32_t* bianry_length) {
+    int result = 0;
+    if (null_count == 0) {
+      PARQUET_THROW_NOT_OK(DecodeArrowDenseNonNull_opt(num_values,
+                                          offset, values,
+                                          out, &result, bianry_length));
+    } else {
+      PARQUET_THROW_NOT_OK(DecodeArrowDense_opt(num_values, null_count, valid_bits,
+                                          offset, values,
+                                          valid_bits_offset, out, &result, bianry_length));
+      
+    }
+
+    // PARQUET_THROW_NOT_OK(DecodeArrowDense(num_values, null_count, valid_bits,
+    //                                       valid_bits_offset, out, &result));
+
+    return result;
+  }
+
+
  private:
   Status DecodeArrowDense(int num_values, int null_count, const uint8_t* valid_bits,
                           int64_t valid_bits_offset,
@@ -1920,6 +2047,92 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     return Status::OK();
   }
 
+  Status DecodeArrowDense_opt(int num_values, int null_count, const uint8_t* valid_bits,
+                          int32_t* offset,
+                          std::shared_ptr<::arrow::ResizableBuffer> & values,
+                          int64_t valid_bits_offset,
+                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
+                          int* out_num_values,
+                          int32_t* bianry_length) {
+    constexpr int32_t kBufferSize = 1024;
+    int32_t indices[kBufferSize];
+
+    // ArrowBinaryHelper helper(out);
+
+    auto dst_value = values->mutable_data() + (*bianry_length);
+
+
+
+    ::arrow::internal::BitmapReader bit_reader(valid_bits, valid_bits_offset, num_values);
+
+    auto dict_values = reinterpret_cast<const ByteArray*>(dictionary_->data());
+    int values_decoded = 0;
+    int num_appended = 0;
+    while (num_appended < num_values) {
+      bool is_valid = bit_reader.IsSet();
+      bit_reader.Next();
+
+      if (is_valid) {
+        int32_t batch_size =
+            std::min<int32_t>(kBufferSize, num_values - num_appended - null_count);
+        int num_indices = idx_decoder_.GetBatch(indices, batch_size);
+
+        if (ARROW_PREDICT_FALSE(num_indices < 1)) {
+          return Status::Invalid("Invalid number of indices '", num_indices, "'");
+        }
+
+        int i = 0;
+        while (true) {
+          // Consume all indices
+          if (is_valid) {
+            auto idx = indices[i];
+            RETURN_NOT_OK(IndexInBounds(idx));
+            const auto& val = dict_values[idx];
+            // if (ARROW_PREDICT_FALSE(!helper.CanFit(val.len))) {
+            //   RETURN_NOT_OK(helper.PushChunk());
+            // }
+            // RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
+            
+            auto value_len = val.len;
+            auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
+            uint64_t capacity = values->capacity();
+            if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
+              capacity = capacity + std::max((capacity >> 1), (uint64_t)value_len);
+              values->Reserve(capacity);
+              dst_value = values->mutable_data() + (*bianry_length);
+            }
+            (*bianry_length) += value_len;
+            memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+            dst_value = dst_value + value_len;
+
+
+            ++i;
+            ++values_decoded;
+          } else {
+            // RETURN_NOT_OK(helper.AppendNull());
+            offset[num_appended+1] = offset[num_appended];
+            --null_count;
+          }
+          ++num_appended;
+          if (i == num_indices) {
+            // Do not advance the bit_reader if we have fulfilled the decode
+            // request
+            break;
+          }
+          is_valid = bit_reader.IsSet();
+          bit_reader.Next();
+        }
+      } else {
+        // RETURN_NOT_OK(helper.AppendNull());
+        offset[num_appended+1] = offset[num_appended];
+        --null_count;
+        ++num_appended;
+      }
+    }
+    *out_num_values = values_decoded;
+    return Status::OK(); 
+  }
+
   Status DecodeArrowDenseNonNull(int num_values,
                                  typename EncodingTraits<ByteArrayType>::Accumulator* out,
                                  int* out_num_values) {
@@ -1942,6 +2155,56 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
           RETURN_NOT_OK(helper.PushChunk());
         }
         RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
+      }
+      values_decoded += num_indices;
+    }
+    *out_num_values = values_decoded;
+    return Status::OK();
+  }
+
+  Status DecodeArrowDenseNonNull_opt(int num_values,
+                          int32_t* offset,
+                          std::shared_ptr<::arrow::ResizableBuffer> & values,
+                          typename EncodingTraits<ByteArrayType>::Accumulator* out,
+                          int* out_num_values,
+                          int32_t* bianry_length) {
+
+    constexpr int32_t kBufferSize = 2048;
+    int32_t indices[kBufferSize];
+    int values_decoded = 0;
+
+    // ArrowBinaryHelper helper(out);
+    auto dict_values = reinterpret_cast<const ByteArray*>(dictionary_->data());
+
+    auto dst_value = values->mutable_data() + (*bianry_length);
+    int num_appended = 0;
+
+    while (values_decoded < num_values) {
+      int32_t batch_size = std::min<int32_t>(kBufferSize, num_values - values_decoded);
+      int num_indices = idx_decoder_.GetBatch(indices, batch_size);
+      if (num_indices == 0) ParquetException::EofException();
+      for (int i = 0; i < num_indices; ++i) {
+        auto idx = indices[i];
+        RETURN_NOT_OK(IndexInBounds(idx));
+        const auto& val = dict_values[idx];
+        // if (ARROW_PREDICT_FALSE(!helper.CanFit(val.len))) {
+        //   RETURN_NOT_OK(helper.PushChunk());
+        // }
+        // RETURN_NOT_OK(helper.Append(val.ptr, static_cast<int32_t>(val.len)));
+
+        auto value_len = val.len;
+        auto value_offset= offset[num_appended+1] = offset[num_appended] + value_len;
+        uint64_t capacity = values->capacity();
+        if (ARROW_PREDICT_FALSE(value_offset >= capacity)) {
+          capacity = capacity + std::max((capacity >> 1), (uint64_t)value_len);
+          values->Reserve(capacity);
+          dst_value = values->mutable_data() + (*bianry_length);
+        }
+        (*bianry_length) += value_len;
+        memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+        dst_value = dst_value + value_len;
+
+        num_appended++;
       }
       values_decoded += num_indices;
     }

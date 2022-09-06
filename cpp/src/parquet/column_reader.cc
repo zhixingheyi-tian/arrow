@@ -1554,6 +1554,8 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
       : TypedRecordReader<ByteArrayType>(descr, leaf_info, pool) {
     DCHECK_EQ(descr_->physical_type(), Type::BYTE_ARRAY);
     accumulator_.builder.reset(new ::arrow::BinaryBuilder(pool));
+    values_ = AllocateBuffer(pool);
+    offset_ = AllocateBuffer(pool);
   }
 
   ::arrow::ArrayVector GetBuilderChunks() override {
@@ -1568,23 +1570,106 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
   }
 
   void ReadValuesDense(int64_t values_to_read) override {
-    int64_t num_decoded = this->current_decoder_->DecodeArrowNonNull(
-        static_cast<int>(values_to_read), &accumulator_);
+    // int64_t num_decoded = this->current_decoder_->DecodeArrowNonNull(
+    //     static_cast<int>(values_to_read), &accumulator_);
+    int64_t num_decoded = this->current_decoder_->DecodeArrow_opt(
+        static_cast<int>(values_to_read), 0,
+        NULLPTR, (reinterpret_cast<int32_t *>(offset_->mutable_data()) + values_written_), 
+        values_, 0, &accumulator_, &bianry_length_);
     DCHECK_EQ(num_decoded, values_to_read);
-    ResetValues();
+    // ResetValues();
   }
 
+  // void ReadValuesSpaced(int64_t values_to_read, int64_t null_count) override {
+  //   int64_t num_decoded = this->current_decoder_->DecodeArrow(
+  //       static_cast<int>(values_to_read), static_cast<int>(null_count),
+  //       valid_bits_->mutable_data(), values_written_, &accumulator_);
+  //   DCHECK_EQ(num_decoded, values_to_read - null_count);
+  //   ResetValues();
+  // }
+
   void ReadValuesSpaced(int64_t values_to_read, int64_t null_count) override {
-    int64_t num_decoded = this->current_decoder_->DecodeArrow(
+    int64_t num_decoded = this->current_decoder_->DecodeArrow_opt(
         static_cast<int>(values_to_read), static_cast<int>(null_count),
-        valid_bits_->mutable_data(), values_written_, &accumulator_);
+        valid_bits_->mutable_data(), (reinterpret_cast<int32_t *>(offset_->mutable_data()) + values_written_), 
+        values_, values_written_, &accumulator_, &bianry_length_);
     DCHECK_EQ(num_decoded, values_to_read - null_count);
-    ResetValues();
+    // ResetValues();
+  }
+
+  void ReserveValues(int64_t extra_values) {
+    const int64_t new_values_capacity =
+        UpdateCapacity(values_capacity_, values_written_, extra_values);
+    if (new_values_capacity > values_capacity_) {
+      PARQUET_THROW_NOT_OK(
+          values_->Resize(new_values_capacity * 20, false));
+      PARQUET_THROW_NOT_OK(
+          offset_->Resize((new_values_capacity+1) * 4, false));
+
+      auto offset = reinterpret_cast<int32_t *>(offset_->mutable_data());
+      offset[0] = 0;
+      
+      values_capacity_ = new_values_capacity;
+    }
+    if (leaf_info_.HasNullableValues()) {
+      int64_t valid_bytes_new = BitUtil::BytesForBits(values_capacity_);
+      if (valid_bits_->size() < valid_bytes_new) {
+        int64_t valid_bytes_old = BitUtil::BytesForBits(values_written_);
+        PARQUET_THROW_NOT_OK(valid_bits_->Resize(valid_bytes_new, false));
+
+        // Avoid valgrind warnings
+        memset(valid_bits_->mutable_data() + valid_bytes_old, 0,
+               valid_bytes_new - valid_bytes_old);
+      }
+    }
+  }
+
+ std::shared_ptr<ResizableBuffer> ReleaseValues() override {
+      auto result = values_;
+      // PARQUET_THROW_NOT_OK(result->Resize(bytes_for_values(values_written_), true));
+      values_ = AllocateBuffer(this->pool_);
+      values_capacity_ = 0;
+      return result;
+  }
+
+  std::shared_ptr<ResizableBuffer> ReleaseOffsets() {
+      auto result = offset_;
+
+      auto offsetArr = reinterpret_cast<int32_t *>(offset_->mutable_data());
+      const auto first_offset = offsetArr[0];
+      const auto last_offset = offsetArr[values_written_];
+      int64_t binary_length = last_offset - first_offset;
+      // std::cout << "binary_length:" << binary_length << std::endl;
+      values_->SetSize(binary_length);
+    
+      offset_ = AllocateBuffer(this->pool_);
+      bianry_length_ = 0;
+      return result;
+  }
+
+  void ResetValues() {
+    if (values_written_ > 0) {
+      // Resize to 0, but do not shrink to fit
+      PARQUET_THROW_NOT_OK(valid_bits_->Resize(0, false));
+      PARQUET_THROW_NOT_OK(offset_->Resize(0, false));
+      PARQUET_THROW_NOT_OK(values_->Resize(0, false));
+
+      values_written_ = 0;
+      values_capacity_ = 0;
+      null_count_ = 0;
+      bianry_length_ = 0;
+    }
   }
 
  private:
   // Helper data structure for accumulating builder chunks
   typename EncodingTraits<ByteArrayType>::Accumulator accumulator_;
+
+  int32_t bianry_length_ = 0;
+
+  // std::shared_ptr<::arrow::ResizableBuffer> values_;
+  std::shared_ptr<::arrow::ResizableBuffer> offset_;
+  // std::shared_ptr<::arrow::ResizableBuffer> valid_bits_;
 };
 
 class ByteArrayDictionaryRecordReader : public TypedRecordReader<ByteArrayType>,
