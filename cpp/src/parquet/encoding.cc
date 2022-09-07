@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 #include <iostream>
+#include <immintrin.h>
 
 #include "arrow/array.h"
 #include "arrow/array/builder_dict.h"
@@ -60,6 +61,31 @@ using ArrowPoolVector = std::vector<T, ::arrow::stl::allocator<T>>;
 
 namespace parquet {
 namespace {
+
+void memcpy_avx512(void* dest, const void* src, size_t length) {
+  uint32_t k;
+  for (k = 0; k + 32 < length; k += 32) {
+    __m256i v = _mm256_loadu_si256((const __m256i*)(src + k));
+    _mm256_storeu_si256((__m256i*)(dest + k), v);
+  }
+  auto mask = (1L << (length - k)) - 1;
+  __m256i v = _mm256_maskz_loadu_epi8(mask, src + k);
+  _mm256_mask_storeu_epi8(dest + k, mask, v);
+}
+
+// inline __attribute__((always_inline)) void memcpy_avx512(void* dest, const void* src, size_t length) {
+//   int nchunks = length / sizeof(uint64_t); 
+//   int slice = length % sizeof(uint64_t); 
+
+//   uint64_t * s = (uint64_t *)src;
+// 	uint64_t * d = (uint64_t *)dest;
+
+//   while(nchunks--)
+// 	    *d++ = *s++;
+	    
+// 	while (slice--)
+// 	    *((uint8_t *)d++) =*((uint8_t *)s++);
+// }
 
 constexpr int64_t kInMemoryDefaultCapacity = 1024;
 // The Parquet spec isn't very clear whether ByteArray lengths are signed or
@@ -1452,7 +1478,8 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
 
           (*bianry_length) += value_len;
           offset[i+1] = offset[i] + value_len;
-          memcpy(dst_value, data_ + 4, value_len);
+          // memcpy(dst_value, data_ + 4, value_len);
+          memcpy_avx512(dst_value, data_ + 4, value_len);
           dst_value = dst_value + value_len;
 
           data_ += increment;
@@ -2054,7 +2081,8 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
               dst_value = values->mutable_data() + (*bianry_length);
             }
             (*bianry_length) += value_len;
-            memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+            // memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+            memcpy_avx512(dst_value, val.ptr, static_cast<int32_t>(value_len));
             dst_value = dst_value + value_len;
 
 
@@ -2145,7 +2173,8 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
           dst_value = values->mutable_data() + (*bianry_length);
         }
         (*bianry_length) += value_len;
-        memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+        // memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+        memcpy_avx512(dst_value, val.ptr, static_cast<int32_t>(value_len));
         dst_value = dst_value + value_len;
 
         num_appended++;
