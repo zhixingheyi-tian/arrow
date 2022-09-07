@@ -36,8 +36,7 @@ Status JsonHolder::Make(std::shared_ptr<JsonHolder>* holder) {
   return Status::OK();
 }
 
-error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<std::string> fields,
- std::string* res) {
+error_code handle_types(simdjson_result<ondemand::value> raw_res, std::string* res) {
  switch (raw_res.type()) {
    case ondemand::json_type::number: {
       std::stringstream ss;
@@ -66,22 +65,21 @@ error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<st
      return error_code::SUCCESS;
     }
    case ondemand::json_type::object: {
-     // For nested case, e.g., for "{"my": {"hello": 10}}", ".$my" will return an object type.
+     // For nested case, e.g., for "{"my": {"hello": 10}}", "$.my" will return an object type.
      auto obj = raw_res.get_object();
      // For the case that result is a json object.
-     if (fields.empty()) {
-       std::stringstream ss;
-       ss << obj;
-       *res = ss.str();
-       return error_code::SUCCESS;
-     }
-     auto inner_result = obj[fields[0]];
-     fields.erase(fields.begin());
-     return handle_types(inner_result, fields, res);
+     std::stringstream ss;
+     ss << obj;
+     *res = ss.str();
+     return error_code::SUCCESS;
     }
    case ondemand::json_type::array: {
-     // Not supported.
-     return error_code::UNSUPPORTED_ARCHITECTURE;
+     auto array_obj = raw_res.get_array();
+     // For the case that result is a json object.
+     std::stringstream ss;
+     ss << array_obj;
+     *res = ss.str();
+     return error_code::SUCCESS;
     }
    case ondemand::json_type::null: {
      return error_code::UNSUPPORTED_ARCHITECTURE;
@@ -89,9 +87,66 @@ error_code handle_types(simdjson_result<ondemand::value> raw_res, std::vector<st
   }
 }
 
+bool check_char(const std::string& raw_json_str, int check_index) {
+  if (check_index > raw_json_str.length() - 1) {
+    return false;
+  }
+  char ending_char = raw_json_str[check_index];
+  if (ending_char == ',') {
+    return true;
+  } else if (ending_char == '}') {
+    return true;
+  } else if (ending_char == ']') {
+    return true;
+  } else if (ending_char == ' ' || ending_char == '\r' || ending_char == '\n' || ending_char == '\t') {
+    // space, '\r', '\n' or '\t' can precede valid ending char.
+    return check_char(raw_json_str, check_index + 1);
+  } else {
+    return false;
+  }
+}
+
+// This is simple validatin by checking whether the obtained result is followed by expected char,
+// It is useful in ondemand kind of parsing which can ignore the validation of character following
+// closing '"'. This functon is a simple checking. For many cases, even though it returns true, the
+// raw json string can still be illegal possibly.
+bool is_valid(const std::string& raw_json_str, const std::string& output) {
+  auto index = raw_json_str.find(output);
+  if (index == std::string::npos) {
+    // std::runtime_error unexpected_error("Fix me! The result should be a part of json string!");
+    // throw unexpected_error;
+    // Conservatively handling: view the result is true even though it is not found.
+    return true;
+  }
+  // get_json_object(, $)
+  if (index == 0) {
+    return true;
+  }
+  int begin_check_index;
+  // The output string may be surrounded by " in the original json string.
+  if (raw_json_str[index - 1] == '\"') {
+    begin_check_index = index + output.length() + 1;
+  } else {
+    begin_check_index = index + output.length();
+  }
+  return check_char(raw_json_str, begin_check_index);
+}
+
 const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std::string& json_str,
  const std::string& json_path, int32_t* out_len) {
   padded_string padded_input(json_str);
+
+  // Just for json string validation. With ondemand api, when a target field is found, the remaining
+  // json string will not be parsed and validated. So we use the below dom api for fully parsing and
+  // return null result finally for illegal json string, which is consistent with Spark.
+  // This validation can bring much perf. overhead.
+  // dom::parser parser_validate;
+  // dom::element doc_validate;
+  // auto error_validate = parser_validate.parse(padded_input).get(doc_validate);
+  // if (error_validate) {
+  //   return nullptr;
+  // }
+
   ondemand::parser parser;
   ondemand::document doc;
   try {
@@ -102,40 +157,45 @@ const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std:
   if (json_path.length() < 3) {
     return nullptr;
   }
-  // Follow spark's format for specifying a field, e.g., ".$a.b".
-  auto raw_field_name = json_path.substr(2);
-  std::vector<std::string> fields;
-  while (raw_field_name.find(".") != std::string::npos) {
-    auto ind = raw_field_name.find(".");
-    fields.push_back(raw_field_name.substr(0, ind));
-    raw_field_name = raw_field_name.substr(ind + 1);
+  // Follow spark's format for specifying a field, e.g., "$.a.b".
+  char formatted_json_path[json_path.length() + 1];
+  int j = 0;
+  for (int i = 0; i < json_path.length(); i++) {
+    if (json_path[i] == '$' || json_path[i] == ']' || json_path[i] == '\'') {
+      continue;
+    } else if (json_path[i] == '[' || json_path[i] == '.') {
+      formatted_json_path[j] = '/';
+      j++;
+    } else {
+      formatted_json_path[j] = json_path[i];
+      j++;
+    }
   }
-  fields.push_back(raw_field_name);
-
-  // Illegal case.
-  if (fields.size() < 1) {
-    return nullptr;
-  }
-
-  auto raw_res = doc.find_field(fields[0]);
-  error_code error;
+  formatted_json_path[j] = '\0';
   std::string res;
-  fields.erase(fields.begin());
+  error_code error;
   try {
-    error = handle_types(raw_res, fields, &res);
-  } catch(...) {
+    auto raw_res = doc.at_pointer(formatted_json_path);
+    error = handle_types(raw_res, &res);
+    if (error) {
+      return nullptr;
+    }
+  } catch (...) {
     return nullptr;
-  }
-  if (error) {
-   return nullptr;
   }
 
   *out_len = res.length();
   if (*out_len == 0) {
     return reinterpret_cast<const uint8_t*>("");
   }
+
+  if (!is_valid(json_str, res)) {
+    return nullptr;
+  }
+
   uint8_t* result_buffer = reinterpret_cast<uint8_t*>(ctx->arena()->Allocate(*out_len));
   memcpy(result_buffer, res.data(), *out_len);
+
   return result_buffer;
 }
 

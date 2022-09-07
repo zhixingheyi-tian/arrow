@@ -90,6 +90,50 @@ TEST_F(TestJsonHolder, TestJson) {
   std::string expected_res = R"({"name": "fang", "age": "5", "id": "001"})";
   EXPECT_EQ(out_len, expected_res.length());
   EXPECT_EQ(std::string((char*)data, out_len), expected_res);
+
+  // Using bracket to specify json path.
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"({"my": {"param": {"name": "fang", "age": "5", "id": "001"}}})", "$['my']['param']", &out_len);
+  expected_res = R"({"name": "fang", "age": "5", "id": "001"})";
+  EXPECT_EQ(out_len, expected_res.length());
+  EXPECT_EQ(std::string((char*)data, out_len), expected_res);
+
+  // Start from array index.
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"([{"my": {"param": {"name": "fang", "age": "5", "id": "001"}}}, {"other": "placehoder"}])",
+   "$[0]['my']['param']['age']", &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string((char*)data, out_len), "5");
+
+  // Mix bracket and period.
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"([{"my": {"param": {"name": "fang", "age": "5", "id": "001"}}}, {"other": "placehoder"}])",
+   "$[0].my.param.age", &out_len);
+  EXPECT_EQ(out_len, 1);
+  EXPECT_EQ(std::string((char*)data, out_len), "5");
+
+  // Get array result.
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"([{"my": {"param": {"name": "fang"}}}, {"other": ["placeholder1", "placeholder2"]}])",
+   "$[1].other", &out_len);
+  expected_res = R"(["placeholder1", "placeholder2"])";
+  EXPECT_EQ(out_len, expected_res.length());
+  EXPECT_EQ(std::string((char*)data, out_len), expected_res);
+
+  // Return array element as result.
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"([{"my": {"param": {"name": "fang"}}}, {"other": ["placeholder1", "placeholder2"]}])",
+   "$[1].other[0]", &out_len);
+  expected_res = "placeholder1";
+  EXPECT_EQ(out_len, expected_res.length());
+  EXPECT_EQ(std::string((char*)data, out_len), expected_res);
+
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"([{"my": {"param": {"name": "fang"}}}, {"other": ["placeholder1", "placeholder2"]}])",
+   "$[1].other[1]", &out_len);
+  expected_res = "placeholder2";
+  EXPECT_EQ(out_len, expected_res.length());
+  EXPECT_EQ(std::string((char*)data, out_len), expected_res);
 }
 
 }  // namespace gandiva
