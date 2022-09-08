@@ -87,11 +87,12 @@ error_code handle_types(simdjson_result<ondemand::value> raw_res, std::string* r
   }
 }
 
-bool check_char(const std::string& raw_json_str, int check_index) {
-  if (check_index > raw_json_str.length() - 1) {
-    return false;
-  }
-  char ending_char = raw_json_str[check_index];
+// This is simple validation by checking whether the obtained result is followed by expected char.
+// It is useful in ondemand kind of parsing which can ignore the validation of character following
+// closing '"'. This functon is a simple checking. For many cases, even though it returns true, the
+// raw json string can still be illegal possibly.
+bool check_char(const char* current_position, int check_index) {
+  char ending_char = current_position[check_index];
   if (ending_char == ',') {
     return true;
   } else if (ending_char == '}') {
@@ -100,36 +101,10 @@ bool check_char(const std::string& raw_json_str, int check_index) {
     return true;
   } else if (ending_char == ' ' || ending_char == '\r' || ending_char == '\n' || ending_char == '\t') {
     // space, '\r', '\n' or '\t' can precede valid ending char.
-    return check_char(raw_json_str, check_index + 1);
+    return check_char(current_position, check_index + 1);
   } else {
     return false;
   }
-}
-
-// This is simple validatin by checking whether the obtained result is followed by expected char,
-// It is useful in ondemand kind of parsing which can ignore the validation of character following
-// closing '"'. This functon is a simple checking. For many cases, even though it returns true, the
-// raw json string can still be illegal possibly.
-bool is_valid(const std::string& raw_json_str, const std::string& output) {
-  auto index = raw_json_str.find(output);
-  if (index == std::string::npos) {
-    // std::runtime_error unexpected_error("Fix me! The result should be a part of json string!");
-    // throw unexpected_error;
-    // Conservatively handling: view the result is true even though it is not found.
-    return true;
-  }
-  // get_json_object(, $)
-  if (index == 0) {
-    return true;
-  }
-  int begin_check_index;
-  // The output string may be surrounded by " in the original json string.
-  if (raw_json_str[index - 1] == '\"') {
-    begin_check_index = index + output.length() + 1;
-  } else {
-    begin_check_index = index + output.length();
-  }
-  return check_char(raw_json_str, begin_check_index);
 }
 
 const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std::string& json_str,
@@ -189,7 +164,9 @@ const uint8_t* JsonHolder::operator()(gandiva::ExecutionContext* ctx, const std:
     return reinterpret_cast<const uint8_t*>("");
   }
 
-  if (!is_valid(json_str, res)) {
+  const char* current_location;
+  doc.current_location().get(current_location);
+  if (!check_char(current_location, 0)) {
     return nullptr;
   }
 

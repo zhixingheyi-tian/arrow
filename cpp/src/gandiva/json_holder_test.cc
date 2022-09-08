@@ -134,6 +134,12 @@ TEST_F(TestJsonHolder, TestJson) {
   expected_res = "placeholder2";
   EXPECT_EQ(out_len, expected_res.length());
   EXPECT_EQ(std::string((char*)data, out_len), expected_res);
+
+  // The nested quote is viewed as illegal json string.
+  out_len = 0;
+  data = get_json_object(&execution_context_, R"([{"my": {"param": {"name": "fang"quoted""}}}, {"other": ["placeholder1", "placeholder2"]}])",
+   "$[0].my.param.name", &out_len);
+  EXPECT_EQ(data, nullptr);
 }
 
 }  // namespace gandiva
