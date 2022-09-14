@@ -130,12 +130,16 @@ class GoogleBenchmarkColumnarToRow_CacheScan_Benchmark
           properties, &parquet_reader));
 
       std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
+      // ASSERT_NOT_OK(parquet_reader->GetRecordBatchReader(
+      //     row_group_indices, local_column_indices, &record_batch_reader));
+      // need varify complex type, so remove local_column_indices
       ASSERT_NOT_OK(parquet_reader->GetRecordBatchReader(
-          row_group_indices, local_column_indices, &record_batch_reader));
+          row_group_indices, &record_batch_reader));
       do {
         TIME_NANO_OR_THROW(elapse_read, record_batch_reader->ReadNext(&record_batch));
 
         if (record_batch) {
+          // std::cout << " record_batch->ToString(): " << record_batch->ToString() << std::endl;
           // batches.push_back(record_batch);
           num_batches += 1;
           num_rows += record_batch->num_rows();

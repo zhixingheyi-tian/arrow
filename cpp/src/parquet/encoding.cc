@@ -62,7 +62,7 @@ using ArrowPoolVector = std::vector<T, ::arrow::stl::allocator<T>>;
 namespace parquet {
 namespace {
 
-void memcpy_avx512(void* dest, const void* src, size_t length) {
+inline __attribute__((always_inline)) void memcpy_avx512(void* dest, const void* src, size_t length) {
   uint32_t k;
   for (k = 0; k + 32 < length; k += 32) {
     __m256i v = _mm256_loadu_si256((const __m256i*)(src + k));
@@ -73,7 +73,7 @@ void memcpy_avx512(void* dest, const void* src, size_t length) {
   _mm256_mask_storeu_epi8(dest + k, mask, v);
 }
 
-// inline __attribute__((always_inline)) void memcpy_avx512(void* dest, const void* src, size_t length) {
+// inline __attribute__((always_inline)) void memcpy_opt(void* dest, const void* src, size_t length) {
 //   int nchunks = length / sizeof(uint64_t); 
 //   int slice = length % sizeof(uint64_t); 
 
@@ -1478,8 +1478,12 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
 
           (*bianry_length) += value_len;
           offset[i+1] = offset[i] + value_len;
-          // memcpy(dst_value, data_ + 4, value_len);
+#ifdef __AVX512BW__
           memcpy_avx512(dst_value, data_ + 4, value_len);
+#else
+          memcpy(dst_value, data_ + 4, value_len);
+#endif
+         
           dst_value = dst_value + value_len;
 
           data_ += increment;
@@ -2081,8 +2085,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
               dst_value = values->mutable_data() + (*bianry_length);
             }
             (*bianry_length) += value_len;
-            // memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+#ifdef __AVX512BW__
             memcpy_avx512(dst_value, val.ptr, static_cast<int32_t>(value_len));
+#else
+            memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+#endif
             dst_value = dst_value + value_len;
 
 
@@ -2173,8 +2180,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
           dst_value = values->mutable_data() + (*bianry_length);
         }
         (*bianry_length) += value_len;
-        // memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+#ifdef __AVX512BW__
         memcpy_avx512(dst_value, val.ptr, static_cast<int32_t>(value_len));
+#else
+        memcpy(dst_value, val.ptr, static_cast<int32_t>(value_len));
+#endif
         dst_value = dst_value + value_len;
 
         num_appended++;
