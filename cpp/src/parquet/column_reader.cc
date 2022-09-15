@@ -1630,7 +1630,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
 
       if (ARROW_PREDICT_FALSE(!hasCal_average_len_)) {
         binary_per_row_length_ = binary_length / values_written_ + 1;
-        std::cout << "binary_per_row_length_:" << binary_per_row_length_ << std::endl;
+        // std::cout << "binary_per_row_length_:" << binary_per_row_length_ << std::endl;
         hasCal_average_len_ = true;
       }
     
