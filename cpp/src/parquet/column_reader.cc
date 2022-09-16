@@ -1626,6 +1626,7 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
 
  std::shared_ptr<ResizableBuffer> ReleaseValues() override {
       auto result = values_;
+      std::cout << "values_->size():" << values_->size() << std::endl;
       // PARQUET_THROW_NOT_OK(result->Resize(bytes_for_values(values_written_), true));
       values_ = AllocateBuffer(this->pool_);
       values_capacity_ = 0;
@@ -1639,9 +1640,9 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
       const auto first_offset = offsetArr[0];
       const auto last_offset = offsetArr[values_written_];
       int64_t binary_length = last_offset - first_offset;
-      // std::cout << "binary_length:" << binary_length << std::endl;
+      std::cout << "binary_length:" << binary_length << std::endl;
       values_->SetSize(binary_length);
-    
+
       offset_ = AllocateBuffer(this->pool_);
       bianry_length_ = 0;
       return result;

@@ -18,6 +18,7 @@
 #include "arrow/array/validate.h"
 
 #include <vector>
+#include <iostream>
 
 #include "arrow/array.h"  // IWYU pragma: keep
 #include "arrow/extension_type.h"
@@ -205,6 +206,8 @@ struct ValidateArrayImpl {
       }
       const auto data_extent = last_offset - first_offset;
       const auto values_length = values.size();
+      std::cout << "data_extent:" << data_extent << std::endl;
+      std::cout << "values_length:" << values_length << std::endl;
       if (values_length < data_extent) {
         return Status::Invalid("Length spanned by binary offsets (", data_extent,
                                ") larger than values array (size ", values_length, ")");
