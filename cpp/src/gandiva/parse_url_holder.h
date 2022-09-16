@@ -21,6 +21,7 @@
 #include <re2/re2.h>
 #include <string>
 #include <unordered_map>
+#include <iostream>
 
 #include "arrow/status.h"
 #include "arrow/util/uri.h"
@@ -45,9 +46,9 @@ namespace gandiva {
     const char * operator()(
         ExecutionContext *ctx, const char * url, int32_t url_len,
         const char * part, int32_t part_len, int32_t *out_length) {
-      auto part_string = arrow::util::string_view(part, part_len);
+      auto part_string = std::string(part, part_len);
       arrow::internal::Uri uri;
-      arrow::util::string_view out;
+      std::string out;
 
       // Here we skip the query parsing, as urlparser does not support invalid characters in url,
       // which are actually supported in vanilla Spark, except spaces, { and }.
@@ -95,10 +96,10 @@ namespace gandiva {
         // consistent with vanilla spark
         if (query_start_idx != -1) {
           if (fragment_start_idx != -1) {
-            out = arrow::util::string_view(
+            out = std::string(
                 url + query_start_idx + 1, fragment_start_idx - query_start_idx - 1);
           } else {
-            out = arrow::util::string_view(
+            out = std::string(
                 url + query_start_idx + 1, url_len - query_start_idx - 1);
           }
         }  else {
@@ -110,10 +111,10 @@ namespace gandiva {
         if (query_start_idx != -1) {
           int32_t file_start_idx = query_start_idx - uri.path().length();
           if (fragment_start_idx != -1) {
-            out = arrow::util::string_view(
+            out = std::string(
                 url + file_start_idx, fragment_start_idx - file_start_idx);
           } else {
-            out = arrow::util::string_view(
+            out = std::string(
                 url + file_start_idx, url_len - file_start_idx);
           }
         } else {
@@ -134,7 +135,7 @@ namespace gandiva {
       } else if (part_string == "REF") {
         // consistent with vanilla spark
         if (fragment_start_idx != -1) {
-          out = arrow::util::string_view(
+          out = std::string(
               url + fragment_start_idx + 1, url_len - fragment_start_idx -1);
         } else {
           return nullptr;
@@ -163,8 +164,8 @@ namespace gandiva {
         ExecutionContext *ctx, const char * url, int32_t url_len,
         const char * part, int32_t part_len,
         const char * pattern, int32_t pattern_len, int32_t *out_length) {
-      auto part_string = arrow::util::string_view(part, part_len);
-      auto pattern_string = arrow::util::string_view(pattern, pattern_len);
+      auto part_string = std::string(part, part_len);
+      auto pattern_string = std::string(pattern, pattern_len);
       arrow::internal::Uri uri;
       std::string out;
 
@@ -216,7 +217,7 @@ namespace gandiva {
       }
 
       std::string query_string(url + query_start_idx + 1, fragment_start_idx - query_start_idx - 1);
-      RE2 re2("(&|^)" + pattern_string.to_string() + "=([^&|^#]*)");
+      RE2 re2("(&|^)" + pattern_string + "=([^&|^#]*)");
       int groups_num = re2.NumberOfCapturingGroups();
       RE2::Arg *args[groups_num];
       for (int i = 0; i < groups_num; i++) {
