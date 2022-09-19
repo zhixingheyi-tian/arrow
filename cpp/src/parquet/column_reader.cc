@@ -1628,11 +1628,11 @@ class ByteArrayChunkedRecordReader : public TypedRecordReader<ByteArrayType>,
       int64_t binary_length = last_offset - first_offset;
       values_->SetSize(binary_length);
 
-      if (ARROW_PREDICT_FALSE(!hasCal_average_len_)) {
-        binary_per_row_length_ = binary_length / values_written_ + 1;
-        // std::cout << "binary_per_row_length_:" << binary_per_row_length_ << std::endl;
-        hasCal_average_len_ = true;
-      }
+      // if (ARROW_PREDICT_FALSE(!hasCal_average_len_)) {
+      //   binary_per_row_length_ = binary_length / values_written_ + 1;
+      //   std::cout << "binary_per_row_length_:" << binary_per_row_length_ << std::endl;
+      //   hasCal_average_len_ = true;
+      // }
     
       offset_ = AllocateBuffer(this->pool_);
       bianry_length_ = 0;
