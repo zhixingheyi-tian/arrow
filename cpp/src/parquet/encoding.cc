@@ -1361,12 +1361,13 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
   }
 
   int DecodeArrowZeroCopy(int num_values, int null_count, const uint8_t* valid_bits,
-                      int32_t* offset, std::shared_ptr<::arrow::ResizableBuffer>& values,
-                      int64_t valid_bits_offset, int32_t* bianry_length) override {
+                          int32_t* offset,
+                          std::shared_ptr<::arrow::ResizableBuffer>& values,
+                          int64_t valid_bits_offset, int32_t* bianry_length) override {
     int result = 0;
-    PARQUET_THROW_NOT_OK(DecodeArrowDenseZeroCopy(num_values, null_count, valid_bits, offset,
-                                              values, valid_bits_offset, &result,
-                                              bianry_length));
+    PARQUET_THROW_NOT_OK(DecodeArrowDenseZeroCopy(num_values, null_count, valid_bits,
+                                                  offset, values, valid_bits_offset,
+                                                  &result, bianry_length));
 
     return result;
   }
@@ -1423,11 +1424,11 @@ class PlainByteArrayDecoder : public PlainDecoder<ByteArrayType>,
     return Status::OK();
   }
 
-  Status DecodeArrowDenseZeroCopy(int num_values, int null_count, const uint8_t* valid_bits,
-                              int32_t* offset,
-                              std::shared_ptr<::arrow::ResizableBuffer>& values,
-                              int64_t valid_bits_offset, int* out_values_decoded,
-                              int32_t* bianry_length) {
+  Status DecodeArrowDenseZeroCopy(int num_values, int null_count,
+                                  const uint8_t* valid_bits, int32_t* offset,
+                                  std::shared_ptr<::arrow::ResizableBuffer>& values,
+                                  int64_t valid_bits_offset, int* out_values_decoded,
+                                  int32_t* bianry_length) {
     int values_decoded = 0;
     auto dst_value = values->mutable_data() + (*bianry_length);
     int64_t capacity = values->size();
@@ -1941,16 +1942,17 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
   }
 
   int DecodeArrowZeroCopy(int num_values, int null_count, const uint8_t* valid_bits,
-                      int32_t* offset, std::shared_ptr<::arrow::ResizableBuffer>& values,
-                      int64_t valid_bits_offset, int32_t* bianry_length) override {
+                          int32_t* offset,
+                          std::shared_ptr<::arrow::ResizableBuffer>& values,
+                          int64_t valid_bits_offset, int32_t* bianry_length) override {
     int result = 0;
     if (null_count == 0) {
       PARQUET_THROW_NOT_OK(DecodeArrowDenseNonNull_opt(num_values, offset, values,
                                                        &result, bianry_length));
     } else {
       PARQUET_THROW_NOT_OK(DecodeArrowDenseZeroCopy(num_values, null_count, valid_bits,
-                                                offset, values, valid_bits_offset,
-                                                &result, bianry_length));
+                                                    offset, values, valid_bits_offset,
+                                                    &result, bianry_length));
     }
 
     return result;
@@ -2026,11 +2028,11 @@ class DictByteArrayDecoderImpl : public DictDecoderImpl<ByteArrayType>,
     return Status::OK();
   }
 
-  Status DecodeArrowDenseZeroCopy(int num_values, int null_count, const uint8_t* valid_bits,
-                              int32_t* offset,
-                              std::shared_ptr<::arrow::ResizableBuffer>& values,
-                              int64_t valid_bits_offset, int* out_num_values,
-                              int32_t* bianry_length) {
+  Status DecodeArrowDenseZeroCopy(int num_values, int null_count,
+                                  const uint8_t* valid_bits, int32_t* offset,
+                                  std::shared_ptr<::arrow::ResizableBuffer>& values,
+                                  int64_t valid_bits_offset, int* out_num_values,
+                                  int32_t* bianry_length) {
     constexpr int32_t kBufferSize = 1024;
     int32_t indices[kBufferSize];
     auto dst_value = values->mutable_data() + (*bianry_length);
